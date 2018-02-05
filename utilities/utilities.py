@@ -1,6 +1,8 @@
 import time
 import subprocess
 
+from utilities.SeqReader import SeqReader
+
 """ A collection of various helper functions"""
 
 complements = str.maketrans("ACGTNURYSWKMBVDH", "TGCANAYRSWMKVBHD")
@@ -25,3 +27,11 @@ def run(cmnd):
 def log(message):
     """ Log messages to standard output. """
     print (time.ctime() + ' ' + message)
+
+
+def read_contigs(in_file):
+    d = dict()
+    x = SeqReader(in_file)
+    for header, seq in x.parse_fasta():
+        d[header.replace('>', '')] = seq
+    return d
