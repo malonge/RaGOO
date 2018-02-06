@@ -259,8 +259,8 @@ if __name__ == "__main__":
     os.chdir(output_path)
 
     # Run minimap2
-    cmd = '{} -k19 -w19 -t3 ../{} ../{} ' \
-          '> contigs_against_ref.paf 2> contigs_against_ref.paf.log'.format(minimap_path, reference_file, contigs_file)
+    cmd = '{} -k19 -w19 -t{} ../{} ../{} ' \
+          '> contigs_against_ref.paf 2> contigs_against_ref.paf.log'.format(minimap_path, t, reference_file, contigs_file)
 
     if not os.path.isfile('contigs_against_ref.paf'):
         run(cmd)
