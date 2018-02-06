@@ -202,6 +202,20 @@ def align_breaks(break_type, m_path, in_reference_file, in_contigs_file):
 
     os.chdir(current_path)
 
+
+def align_pms(m_path, num_threads, in_reference_file):
+    current_path = os.getcwd()
+    output_path = current_path + '/pm_alignments'
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+    os.chdir('pm_alignments')
+
+    cmd = '{} -ax asm5 -t{} ../../{} {} ' \
+          '> pm_against_ref.sam 2> pm_contigs_against_ref.sam.log'.format(m_path, num_threads,
+                                                                                        in_reference_file, '../ragoo.fasta')
+    if not os.path.isfile('inter_contigs_against_ref.paf'):
+        run(cmd)
+
 if __name__ == "__main__":
     import os
     import argparse
@@ -214,11 +228,12 @@ if __name__ == "__main__":
     parser.add_argument("-gff", metavar="<annotations.gff>", type=str, default='', help="Annotations for lift over")
     parser.add_argument("-m", metavar="PATH", type=str, default="", help='path to minimap2 executable')
     parser.add_argument("-b", action='store_true', default=False, help="Break chimeric contigs")
-    parser.add_argument("-p", metavar="[5]", type=int, default=5, help="(for chimera breaking) if this percent or more aligns to additional chromosomes, break.")
-    parser.add_argument("-l", metavar="[10000]", type=int, default=10000, help="(for chimera breaking) minimum alignment lengths to consider.")
-    parser.add_argument("-r", metavar="[100000]", type=int, default=100000, help='(for chimera breaking) minimum ranges to consider')
+    parser.add_argument("-p", metavar="5", type=int, default=5, help="(for chimera breaking) if this percent or more aligns to additional chromosomes, break.")
+    parser.add_argument("-l", metavar="10000", type=int, default=10000, help="(for chimera breaking) minimum alignment lengths to consider.")
+    parser.add_argument("-r", metavar="100000", type=int, default=100000, help='(for chimera breaking) minimum ranges to consider')
     parser.add_argument("-c", metavar="1000000", type=int, default=1000000, help="When findng intrachromosomal chimeras, minimum gap length with respect to the query.")
     parser.add_argument("-d", metavar="20000000", type=int, default=20000000, help="When findng intrachromosomal chimeras, minimum gap length with respect to the reference.")
+    parser.add_argument("-t", metavar="2", type=int, default=2, help="Number of threads when running minimap.")
 
 
     args = parser.parse_args()
@@ -235,6 +250,7 @@ if __name__ == "__main__":
     min_range = args.r
     intra_wrt_ref_min = args.d
     intra_wrt_ctg_min = args.c
+    t = args.t
 
     current_path = os.getcwd()
     output_path = current_path + '/ragoo_output'
@@ -258,7 +274,7 @@ if __name__ == "__main__":
     if gff_file:
         log('-- Getting gff features')
         features = defaultdict(list)
-        z = GFFReader(gff_file)
+        z = GFFReader('../' + gff_file)
         for i in z.parse_gff():
             features[i.seqname].append(i)
 
@@ -275,15 +291,18 @@ if __name__ == "__main__":
             if len(ref_parts) > 1:
                 all_chimeras[i] = ref_parts
 
+        print(all_chimeras.keys())
         log('-- Finding break points and breaking interchromosomally chimeric contigs')
         break_intervals = dict()
         for i in all_chimeras.keys():
             break_intervals[i] = cluster_contig_alns(i, alns, all_chimeras[i], min_len)
+            print(break_intervals[i])
 
             # If its just going to break it into the same thing, skip it.
             if len(break_intervals[i]) <= 1:
                 continue
 
+            print (break_intervals.keys())
             if gff_file:
                 # If desired, ensure that breakpoints don't disrupt any gff intervals
                 break_intervals[i] = avoid_gff_intervals(break_intervals[i], features[i])
@@ -292,58 +311,57 @@ if __name__ == "__main__":
             # Break contigs according to the final break points
             contigs_dict = break_contig(contigs_dict, i, break_intervals[i])
 
-            # Next, need to re-align before finding intrachromosomal chimeras
-            # First, write out the interchromosomal chimera broken fasta
-            out_inter_fasta = contigs_file[:contigs_file.rfind('.')] + '.inter.chimera.broken.fa'
-            if gff_file:
-                out_gff = gff_file[:gff_file.rfind('.')] + '.inter.chimera_broken.gff'
-                write_broken_files(contigs_dict, out_inter_fasta, features, out_gff)
-            else:
-                write_broken_files(contigs_dict, out_inter_fasta)
+        # Next, need to re-align before finding intrachromosomal chimeras
+        # First, write out the interchromosomal chimera broken fasta
+        out_inter_fasta = contigs_file[:contigs_file.rfind('.')] + '.inter.chimera.broken.fa'
+        if gff_file:
+            out_gff = gff_file[:gff_file.rfind('.')] + '.inter.chimera_broken.gff'
+            write_broken_files(contigs_dict, out_inter_fasta, features, out_gff)
+        else:
+            write_broken_files(contigs_dict, out_inter_fasta)
 
-            # Next, realign the chimera broken contigs
-            align_breaks('inter', minimap_path, reference_file, out_inter_fasta)
+        # Next, realign the chimera broken contigs
+        align_breaks('inter', minimap_path, reference_file, out_inter_fasta)
 
-            # Now, use those new alignments for intrachromosomal chimeras
-            log('-- Reading interchromosomal chimera broken alignments')
-            inter_alns = read_paf_alignments('chimera_break/inter_contigs_against_ref.paf')
-            inter_alns = clean_alignments(inter_alns, l=1000, in_exclude_file=exclude_file)
+        # Now, use those new alignments for intrachromosomal chimeras
+        log('-- Reading interchromosomal chimera broken alignments')
+        inter_alns = read_paf_alignments('chimera_break/inter_contigs_against_ref.paf')
+        inter_alns = clean_alignments(inter_alns, l=1000, in_exclude_file=exclude_file)
 
-            # Find intrachromosomally chimeric contigs
-            for i in inter_alns.keys():
-                intra = get_intra_contigs(inter_alns[i], 15000, intra_wrt_ref_min, intra_wrt_ctg_min)
-                if intra:
-                    if gff_file:
-                        intra_break_intervals = avoid_gff_intervals(intra[1], features[intra[0]])
-                    else:
-                        intra_break_intervals = intra[1]
-                    # Check if the avoidance of gff intervals pushed the break point to the end of the contig.
-                    if intra_break_intervals[-1][0] == intra_break_intervals[-1][1]:
-                        continue
+        # Find intrachromosomally chimeric contigs
+        for i in inter_alns.keys():
+            intra = get_intra_contigs(inter_alns[i], 15000, intra_wrt_ref_min, intra_wrt_ctg_min)
+            if intra:
+                if gff_file:
+                    intra_break_intervals = avoid_gff_intervals(intra[1], features[intra[0]])
+                else:
+                    intra_break_intervals = intra[1]
+                # Check if the avoidance of gff intervals pushed the break point to the end of the contig.
+                if intra_break_intervals[-1][0] == intra_break_intervals[-1][1]:
+                    continue
 
-                    # break the contigs and update features if desired
-                    contigs_dict = break_contig(contigs_dict, intra[0], intra_break_intervals)
-                    if gff_file:
-                        features = update_gff(features, intra_break_intervals, intra[0])
+                # break the contigs and update features if desired
+                contigs_dict = break_contig(contigs_dict, intra[0], intra_break_intervals)
+                if gff_file:
+                    features = update_gff(features, intra_break_intervals, intra[0])
 
-            # Write out the intrachromosomal information
-            out_intra_fasta = contigs_file[:contigs_file.rfind('.')] + '.intra.chimera.broken.fa'
-            if gff_file:
-                out_intra_gff = gff_file[:gff_file.rfind('.')] + '.intra.chimera_broken.gff'
-                write_broken_files(contigs_dict, out_intra_fasta, features, out_intra_gff)
-            else:
-                write_broken_files(contigs_dict, out_intra_fasta)
+        # Write out the intrachromosomal information
+        out_intra_fasta = contigs_file[:contigs_file.rfind('.')] + '.intra.chimera.broken.fa'
+        if gff_file:
+            out_intra_gff = gff_file[:gff_file.rfind('.')] + '.intra.chimera_broken.gff'
+            write_broken_files(contigs_dict, out_intra_fasta, features, out_intra_gff)
+        else:
+            write_broken_files(contigs_dict, out_intra_fasta)
 
-            # Re align the contigs
-            # Next, realign the chimera broken contigs
-            align_breaks('intra', minimap_path, reference_file, out_intra_fasta)
+        # Re align the contigs
+        # Next, realign the chimera broken contigs
+        align_breaks('intra', minimap_path, reference_file, out_intra_fasta)
 
-            # Read in alignments of intrachromosomal chimeras and proceed with ordering and orientation
-            log('-- Reading intrachromosomal chimera broken alignments')
-            alns = read_paf_alignments('chimera_break/intra_contigs_against_ref.paf')
-            alns = clean_alignments(alns, l=1000, in_exclude_file=exclude_file)
-
-            contigs_file = '/ragoo_output/chimera_break/' + out_intra_fasta
+        # Read in alignments of intrachromosomal chimeras and proceed with ordering and orientation
+        log('-- Reading intrachromosomal chimera broken alignments')
+        alns = read_paf_alignments('chimera_break/intra_contigs_against_ref.paf')
+        alns = clean_alignments(alns, l=1000, in_exclude_file=exclude_file)
+        contigs_file = '/ragoo_output/chimera_break/' + out_intra_fasta
 
 
 
@@ -373,4 +391,7 @@ if __name__ == "__main__":
     log('-- Creating Pseudomolecules')
     create_pseudomolecules(contigs_file, all_unique_contigs, 500)
 
-    log('goodbye')
+    log('-- Aligning pseudomolecules to reference')
+    align_pms(minimap_path, t, reference_file)
+
+    log('-- goodbye')

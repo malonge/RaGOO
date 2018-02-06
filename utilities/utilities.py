@@ -19,7 +19,7 @@ def reverse_complement(seq):
 
 def run(cmnd):
     """ Run command and report status. """
-    log(' ---- Running : %s' % cmnd)
+    log('-- Running : %s' % cmnd)
     if subprocess.call(cmnd, shell=True) != 0:
         raise RuntimeError('Failed : %s ' % cmnd)
 
