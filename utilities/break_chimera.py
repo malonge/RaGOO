@@ -1,6 +1,9 @@
 from collections import defaultdict
+import copy
 
 from intervaltree import IntervalTree
+
+from utilities.ContigAlignment import UniqueContigAlignment
 
 
 def get_ref_parts(alns, l, p, r):
@@ -150,10 +153,6 @@ def update_gff(features, borders, contig):
     return features
 
 
-def update_alns(in_alns, borders):
-    pass
-
-
 def break_contig(contigs_dict, header, break_points):
     seq = contigs_dict.pop(header)
     test_seq = ''
@@ -163,3 +162,52 @@ def break_contig(contigs_dict, header, break_points):
 
     assert test_seq == seq
     return contigs_dict
+
+
+def get_intra_contigs(alns, l, d, c):
+    """
+    Flag contigs as being intrachromosomal chimeras
+    :param alns:
+    :param l: Minimum alignment length to consider
+    :param d: Distance between consecutive adjacent alignments. If larger than this, flag
+    :return: dict of contigs and break points.
+    """
+
+    # Get only the header to which this contig mostly aligns to.
+    uniq_aln = UniqueContigAlignment(alns)
+    best_header = uniq_aln.ref_chrom
+
+    # Need to filter based on this chromosome, but cant mutate because it will affect
+    # downstream use of alns. So I will make a copy of the object.
+    ctg_alns = copy.deepcopy(alns)
+    ctg_alns.filter_ref_chroms([best_header])
+    ctg_alns.filter_lengths(l)
+
+    # Intialize the list of start and end positions w.r.t the query
+    query_pos = []
+
+    for i in range(len(ctg_alns.ref_headers)):
+        query_pos.append((ctg_alns.ref_starts[i], ctg_alns.ref_ends[i], i))
+
+    final_order = [i[2] for i in sorted(query_pos)]
+
+    # Make a list of distance between alignments
+    # first with respect to (wrt) the reference.
+    distances_wrt_ref = []
+    for i in range(len(final_order)-1):
+        distances_wrt_ref.append(ctg_alns.ref_starts[final_order[i+1]] - ctg_alns.ref_starts[final_order[i]])
+
+    # next, with respect to (wrt) the contig.
+    distances_wrt_ctg = []
+    for i in range(len(final_order) - 1):
+        distances_wrt_ctg.append(ctg_alns.query_starts[final_order[i + 1]] - ctg_alns.query_starts[final_order[i]])
+
+    # This conditional essentially checks if there are any break points for this contig.
+    # Returns None otherwise (no return statement)
+    if distances_wrt_ref:
+        if max(distances_wrt_ref) > d:
+            break_index = distances_wrt_ref.index(max(distances_wrt_ref))
+            return (ctg_alns.contig, [(0, ctg_alns.query_ends[break_index]), (ctg_alns.query_ends[break_index], ctg_alns.query_lens[0])])
+
+        if max(distances_wrt_ctg) > c:
+            return (ctg_alns.contig, [(0, ctg_alns.query_starts[final_order[0]]), (ctg_alns.query_starts[final_order[0]], ctg_alns.query_lens[0])])
