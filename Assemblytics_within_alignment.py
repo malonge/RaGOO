@@ -87,7 +87,7 @@ def run(args):
         # report = "%s\t%d\t%d\tAssemblytics_%d\t%d\t%s\t%s\t%d\t%d\t%s\t%s\n" % line
         if line[4] >= minimum_variant_size:
             line[3] = "Assemblytics_w_%d" % (newcounter)
-            print "\t".join(map(str,line[0:10])) + ":" + str(line[11]) + "-" + str(line[12]) + ":+\t" + line[10]
+            print ("\t".join(map(str,line[0:10])) + ":" + str(line[11]) + "-" + str(line[12]) + ":+\t" + line[10])
             # print "\t".join(map(str,line))
             newcounter += 1
 

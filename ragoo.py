@@ -227,7 +227,33 @@ def get_SVs():
     if not os.path.isfile('pm_against_ref.sam.delta'):
         run(cmd)
 
+    cmd_2 = 'python3 ~/Projects/RaGOO/Assemblytics_uniq_anchor.py --delta pm_against_ref.sam.delta --unique-length 10000 --out assemblytics_out --keep-small-uniques'
+    if not os.path.isfile('assemblytics_out.Assemblytics.unique_length_filtered_l10000.delta'):
+        run(cmd_2)
 
+    cmd_3 = '~/Projects/RaGOO/Assemblytics_between_alignments.pl assemblytics_out.coords.tab 50 10000 all-chromosomes exclude-longrange bed > assemblytics_out.variants_between_alignments.bed'
+    if not os.path.isfile('assemblytics_out.OUTPUT_PREFIX.variants_between_alignments.bed'):
+        run(cmd_3)
+
+    cmd_4 = 'python3 ~/Projects/RaGOO/Assemblytics_within_alignment.py --delta assemblytics_out.Assemblytics.unique_length_filtered_l10000.delta --min 50 > assemblytics_out.variants_within_alignments.bed'
+    if not os.path.isfile('assemblytics_out.variants_within_alignments.bed'):
+        run(cmd_4)
+
+    header = "reference\tref_start\tref_stop\tID\tsize\tstrand\ttype\tref_gap_size\tquery_gap_size\tquery_coordinates\tmethod\n"
+
+    with open('assemblytics_out.variants_between_alignments.bed', 'r')as f1:
+        b1 = f1.read()
+
+    with open('assemblytics_out.variants_within_alignments.bed', 'r') as f2:
+        b2 = f2.read()
+
+    with open('assemblytics_out.Assemblytics_structural_variants.bed', 'w') as f:
+        f.write(header)
+        # Might need to add newlines here
+        f.write(b1)
+        f.write(b2)
+
+    os.chdir(current_path)
 
 
 if __name__ == "__main__":
