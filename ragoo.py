@@ -213,8 +213,22 @@ def align_pms(m_path, num_threads, in_reference_file):
     cmd = '{} -ax asm5 -t{} ../../{} {} ' \
           '> pm_against_ref.sam 2> pm_contigs_against_ref.sam.log'.format(m_path, num_threads,
                                                                                         in_reference_file, '../ragoo.fasta')
-    if not os.path.isfile('inter_contigs_against_ref.paf'):
+    if not os.path.isfile('inter_contigs_against_ref.sam'):
         run(cmd)
+
+    os.chdir(current_path)
+
+
+def get_SVs():
+    current_path = os.getcwd()
+    os.chdir('pm_alignments')
+    # Change this when setup.py is ready. Just call script directly
+    cmd = 'python3 ~/Projects/RaGOO/sam2delta.py pm_against_ref.sam'
+    if not os.path.isfile('pm_against_ref.sam.delta'):
+        run(cmd)
+
+
+
 
 if __name__ == "__main__":
     import os
@@ -233,10 +247,9 @@ if __name__ == "__main__":
     parser.add_argument("-r", metavar="100000", type=int, default=100000, help='(for chimera breaking) minimum ranges to consider')
     parser.add_argument("-c", metavar="1000000", type=int, default=1000000, help="When findng intrachromosomal chimeras, minimum gap length with respect to the query.")
     parser.add_argument("-d", metavar="20000000", type=int, default=20000000, help="When findng intrachromosomal chimeras, minimum gap length with respect to the reference.")
-    parser.add_argument("-t", metavar="2", type=int, default=2, help="Number of threads when running minimap.")
+    parser.add_argument("-t", metavar="3", type=int, default=2, help="Number of threads when running minimap.")
 
-
-    args = parser.parse_args()
+    # Get the command line arguments
     args = parser.parse_args()
     contigs_file = args.contigs
     reference_file = args.reference
@@ -393,5 +406,8 @@ if __name__ == "__main__":
 
     log('-- Aligning pseudomolecules to reference')
     align_pms(minimap_path, t, reference_file)
+
+    log('-- Getting structural variants')
+    get_SVs()
 
     log('-- goodbye')
