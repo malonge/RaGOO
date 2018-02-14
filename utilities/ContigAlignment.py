@@ -1,6 +1,8 @@
 import operator
 from collections import defaultdict
 
+from utilities.utilities import summarize_planesweep, binary_search
+
 
 class ContigAlignment:
     """
@@ -141,6 +143,37 @@ class ContigAlignment:
         for i in range(len(self.ref_headers)):
             if self.aln_lens[i] > l:
                 hits.append(i)
+
+        self.query_lens = [self.query_lens[i] for i in hits]
+        self.query_starts = [self.query_starts[i] for i in hits]
+        self.query_ends = [self.query_ends[i] for i in hits]
+        self.strands = [self.strands[i] for i in hits]
+        self.ref_headers = [self.ref_headers[i] for i in hits]
+        self.ref_lens = [self.ref_lens[i] for i in hits]
+        self.ref_starts = [self.ref_starts[i] for i in hits]
+        self.ref_ends = [self.ref_ends[i] for i in hits]
+        self.num_matches = [self.num_matches[i] for i in hits]
+        self.aln_lens = [self.aln_lens[i] for i in hits]
+        self.mapqs = [self.mapqs[i] for i in hits]
+
+    def unique_anchor_filter(self):
+        """
+        The contents of this method are either influenced by or directly copied from "Assemblytics_uniq_anchor.py"
+        written by Maria Nattestad. The original script can be found here:
+
+        https://github.com/MariaNattestad/Assemblytics
+
+        And the publication associated with Maria's work is here:
+
+        Nattestad, Maria, and Michael C. Schatz. "Assemblytics: a
+        web analytics tool for the detection of variants from an
+        assembly." Bioinformatics 32.19 (2016): 3021-3023.
+        """
+        lines_by_query = []
+        for i, j in zip(self.query_starts, self.query_ends):
+            lines_by_query.append((i, j))
+
+        hits = summarize_planesweep(lines_by_query, 10000)
 
         self.query_lens = [self.query_lens[i] for i in hits]
         self.query_starts = [self.query_starts[i] for i in hits]

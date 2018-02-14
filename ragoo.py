@@ -31,7 +31,7 @@ def write_contig_clusters(unique_dict):
     os.chdir(current_path)
 
 
-def clean_alignments(in_alns, l=10000, in_exclude_file=''):
+def clean_alignments(in_alns, l=10000, in_exclude_file='', uniq_anchor_filter=False):
     # Exclude alignments to undesired reference headers and filter alignment lengths.
     exclude_list = []
     if in_exclude_file:
@@ -43,6 +43,8 @@ def clean_alignments(in_alns, l=10000, in_exclude_file=''):
     for header in in_alns.keys():
         in_alns[header].exclude_ref_chroms(exclude_list)
         in_alns[header].filter_lengths(l)
+        if uniq_anchor_filter:
+            in_alns[header].unique_anchor_filter()
         if len(in_alns[header].ref_headers) == 0:
             empty_headers.append(header)
 
@@ -185,18 +187,17 @@ def write_broken_files(in_contigs, in_contigs_name, in_gff=None, in_gff_name=Non
     os.chdir(current_path)
 
 
-def align_breaks(break_type, m_path, in_reference_file, in_contigs_file):
+def align_breaks(break_type, m_path, in_reference_file, in_contigs_file, in_num_threads):
     current_path = os.getcwd()
     os.chdir('chimera_break')
     if break_type == 'inter':
-        cmd = '{} -k19 -w19 -t3 ../../{} {} ' \
-          '> inter_contigs_against_ref.paf 2> inter_contigs_against_ref.paf.log'.format(m_path, in_reference_file, in_contigs_file)
+        cmd = '{} -k19 -w19 -t{} ../../{} {} ' \
+          '> inter_contigs_against_ref.paf 2> inter_contigs_against_ref.paf.log'.format(m_path, in_num_threads, in_reference_file, in_contigs_file)
         if not os.path.isfile('inter_contigs_against_ref.paf'):
             run(cmd)
     else:
-        cmd = '{} -k19 -w19 -t3 ../../{} {} ' \
-              '> intra_contigs_against_ref.paf 2> intra_contigs_against_ref.paf.log'.format(m_path, in_reference_file,
-                                                                                            in_contigs_file)
+        cmd = '{} -k19 -w19 -t{} ../../{} {} ' \
+              '> intra_contigs_against_ref.paf 2> intra_contigs_against_ref.paf.log'.format(m_path, in_num_threads, in_reference_file, in_contigs_file)
         if not os.path.isfile('intra_contigs_against_ref.paf'):
             run(cmd)
 
@@ -213,7 +214,7 @@ def align_pms(m_path, num_threads, in_reference_file):
     cmd = '{} -ax asm5 -t{} ../../{} {} ' \
           '> pm_against_ref.sam 2> pm_contigs_against_ref.sam.log'.format(m_path, num_threads,
                                                                                         in_reference_file, '../ragoo.fasta')
-    if not os.path.isfile('inter_contigs_against_ref.sam'):
+    if not os.path.isfile('pm_against_ref.sam'):
         run(cmd)
 
     os.chdir(current_path)
@@ -232,7 +233,7 @@ def get_SVs():
         run(cmd_2)
 
     cmd_3 = '~/Projects/RaGOO/Assemblytics_between_alignments.pl assemblytics_out.coords.tab 50 10000 all-chromosomes exclude-longrange bed > assemblytics_out.variants_between_alignments.bed'
-    if not os.path.isfile('assemblytics_out.OUTPUT_PREFIX.variants_between_alignments.bed'):
+    if not os.path.isfile('assemblytics_out.variants_between_alignments.bed'):
         run(cmd_3)
 
     cmd_4 = 'python3 ~/Projects/RaGOO/Assemblytics_within_alignment.py --delta assemblytics_out.Assemblytics.unique_length_filtered_l10000.delta --min 50 > assemblytics_out.variants_within_alignments.bed'
@@ -273,7 +274,7 @@ if __name__ == "__main__":
     parser.add_argument("-r", metavar="100000", type=int, default=100000, help='(for chimera breaking) minimum ranges to consider')
     parser.add_argument("-c", metavar="1000000", type=int, default=1000000, help="When findng intrachromosomal chimeras, minimum gap length with respect to the query.")
     parser.add_argument("-d", metavar="20000000", type=int, default=20000000, help="When findng intrachromosomal chimeras, minimum gap length with respect to the reference.")
-    parser.add_argument("-t", metavar="3", type=int, default=2, help="Number of threads when running minimap.")
+    parser.add_argument("-t", metavar="3", type=int, default=3, help="Number of threads when running minimap.")
 
     # Get the command line arguments
     args = parser.parse_args()
@@ -319,6 +320,7 @@ if __name__ == "__main__":
 
     # Break chimeras if desired
     if break_chimeras:
+        alns = clean_alignments(alns, l=15000, in_exclude_file=exclude_file, uniq_anchor_filter=True)
         # Process contigs
         log('-- Getting contigs')
         contigs_dict = read_contigs('../' + contigs_file)
@@ -330,18 +332,15 @@ if __name__ == "__main__":
             if len(ref_parts) > 1:
                 all_chimeras[i] = ref_parts
 
-        print(all_chimeras.keys())
         log('-- Finding break points and breaking interchromosomally chimeric contigs')
         break_intervals = dict()
         for i in all_chimeras.keys():
             break_intervals[i] = cluster_contig_alns(i, alns, all_chimeras[i], min_len)
-            print(break_intervals[i])
 
             # If its just going to break it into the same thing, skip it.
             if len(break_intervals[i]) <= 1:
                 continue
 
-            print (break_intervals.keys())
             if gff_file:
                 # If desired, ensure that breakpoints don't disrupt any gff intervals
                 break_intervals[i] = avoid_gff_intervals(break_intervals[i], features[i])
@@ -360,7 +359,7 @@ if __name__ == "__main__":
             write_broken_files(contigs_dict, out_inter_fasta)
 
         # Next, realign the chimera broken contigs
-        align_breaks('inter', minimap_path, reference_file, out_inter_fasta)
+        align_breaks('inter', minimap_path, reference_file, out_inter_fasta, t)
 
         # Now, use those new alignments for intrachromosomal chimeras
         log('-- Reading interchromosomal chimera broken alignments')
@@ -394,7 +393,7 @@ if __name__ == "__main__":
 
         # Re align the contigs
         # Next, realign the chimera broken contigs
-        align_breaks('intra', minimap_path, reference_file, out_intra_fasta)
+        align_breaks('intra', minimap_path, reference_file, out_intra_fasta, t)
 
         # Read in alignments of intrachromosomal chimeras and proceed with ordering and orientation
         log('-- Reading intrachromosomal chimera broken alignments')
