@@ -320,7 +320,7 @@ if __name__ == "__main__":
 
     # Break chimeras if desired
     if break_chimeras:
-        alns = clean_alignments(alns, l=15000, in_exclude_file=exclude_file, uniq_anchor_filter=True)
+        alns = clean_alignments(alns, l=10000, in_exclude_file=exclude_file, uniq_anchor_filter=True)
         # Process contigs
         log('-- Getting contigs')
         contigs_dict = read_contigs('../' + contigs_file)

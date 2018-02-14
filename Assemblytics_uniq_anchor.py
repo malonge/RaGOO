@@ -21,28 +21,13 @@ def run(args):
     unique_length = args.unique_length
     output_filename = args.out
     keep_small_uniques = args.keep_small_uniques
-    if keep_small_uniques:
-        print ("Keeping fully unique alignments even if they are below the unique anchor length of", unique_length, "bp")
-    else:
-        print ("Discarding all alignments below the unique anchor length of", unique_length, "bp")
-        print ("Use --keep-small-uniques to keep all the fully unique alignments even below this length")
-    if unique_length == 10000:
-        print ("Use --unique-length X to set the unique anchor length requirement. Default is 10000, such that each alignment must have at least 10000 bp from the query that are not included in any other alignments.")
-
-
-    print ("header:")
     
     f = open(filename)
     header1 = f.readline()
     if header1[0:2]=="\x1f\x8b":
         f.close()
         f = gzip.open(filename)
-        print (f.readline().strip())
-    else:
-        print (header1.strip())
-    
-    # Ignore the first two lines for now
-    print (f.readline().strip())
+
 
     linecounter = 0
 
@@ -88,14 +73,11 @@ def run(args):
         
 
     f.close()
-
-    print ("First read through the file: %d seconds for %d query-reference combinations" % (time.time()-before,linecounter))
     
 
     before = time.time()
     alignments_to_keep = {}
     num_queries = len(lines_by_query)
-    print ("Filtering alignments of %d queries" % (num_queries))
     
     num_query_step_to_report = num_queries/100
     if num_queries < 100:
@@ -133,11 +115,7 @@ def run(args):
         alignments_to_keep[query] = summarize_planesweep(lines_by_query[query], unique_length_required = unique_length,keep_small_uniques=keep_small_uniques)
 
         query_counter += 1
-        if (query_counter % num_query_step_to_report) == 0:
-            print ("Progress: %d%%" % (query_counter*100/num_queries))
-    print ("Progress: 100%")
 
-    print ("Deciding which alignments to keep: %d seconds for %d queries" % (time.time()-before,num_queries))
     before = time.time()
 
 
@@ -234,7 +212,6 @@ def run(args):
     fcoords_out_tab.close()
     fcoords_out_csv.close()
 
-    print ("Reading file and recording all the entries we decided to keep: %d seconds for %d total lines in file" % (time.time()-before,linecounter))
 
     ref_lengths.sort()
     query_lengths.sort()

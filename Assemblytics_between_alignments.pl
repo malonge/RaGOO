@@ -101,8 +101,6 @@ while (<COORDS>)
   $numalignments++;
 }
 
-print STDERR "Loaded $numalignments alignments\n";
-
 
 
 my $candidatefusions = 0;
