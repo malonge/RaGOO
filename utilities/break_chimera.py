@@ -169,16 +169,14 @@ def get_intra_contigs(alns, l, d, c):
     Flag contigs as being intrachromosomal chimeras
     :param alns:
     :param l: Minimum alignment length to consider
-    :param d: Distance between consecutive adjacent alignments. If larger than this, flag
+    :param d: Distance between consecutive adjacent alignments with respect to the reference. If larger than this, flag
+    :param c: Distance between consecutive adjacent alignments with respect to the query. If larger than this, flag
     :return: dict of contigs and break points.
     """
 
     # Get only the header to which this contig mostly aligns to.
     uniq_aln = UniqueContigAlignment(alns)
     best_header = uniq_aln.ref_chrom
-
-    # Need to filter based on this chromosome, but cant mutate because it will affect
-    # downstream use of alns. So I will make a copy of the object.
     ctg_alns = copy.deepcopy(alns)
     ctg_alns.filter_ref_chroms([best_header])
     ctg_alns.filter_lengths(l)
@@ -190,6 +188,7 @@ def get_intra_contigs(alns, l, d, c):
         query_pos.append((ctg_alns.ref_starts[i], ctg_alns.ref_ends[i], i))
 
     final_order = [i[2] for i in sorted(query_pos)]
+    ordered_query_ends = [ctg_alns.query_ends[i] for i in final_order]
 
     # Make a list of distance between alignments
     # first with respect to (wrt) the reference.
@@ -207,7 +206,8 @@ def get_intra_contigs(alns, l, d, c):
     if distances_wrt_ref:
         if max(distances_wrt_ref) > d:
             break_index = distances_wrt_ref.index(max(distances_wrt_ref))
-            return (ctg_alns.contig, [(0, ctg_alns.query_ends[break_index]), (ctg_alns.query_ends[break_index], ctg_alns.query_lens[0])])
+            return (ctg_alns.contig, [(0, ordered_query_ends[break_index]), (ordered_query_ends[break_index], ctg_alns.query_lens[0])])
 
         if max(distances_wrt_ctg) > c:
-            return (ctg_alns.contig, [(0, ctg_alns.query_starts[final_order[0]]), (ctg_alns.query_starts[final_order[0]], ctg_alns.query_lens[0])])
+            break_index = distances_wrt_ctg.index(max(distances_wrt_ctg))
+            return (ctg_alns.contig, [(0, ordered_query_ends[break_index]), (ordered_query_ends[break_index], ctg_alns.query_lens[0])])

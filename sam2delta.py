@@ -55,6 +55,15 @@ class SAMAlignment:
         self._get_query_end()
         self._get_ref_end()
 
+        if self.is_rc:
+            self.query_start, self.query_end = self.query_end, self.query_start
+            # Lazily taking care of off-by-one errors
+            self.query_end += 1
+            self.query_start -= 1
+
+        self.query_end -= 1
+        self.ref_end -= 1
+
     def __str__(self):
         return ' '.join([self.ref_header, self.query_header])
 
@@ -127,9 +136,9 @@ def write_delta(in_alns, in_file_name):
         for aln in in_alns.keys():
             query_len = in_alns[aln][0].query_len
             #print (query_len)
-            f.write('>%s\t%s\t%r\t%r\n' % (aln[0], aln[1], ref_chr_lens[aln[0]], query_len))
+            f.write('>%s %s %r %r\n' % (aln[0], aln[1], ref_chr_lens[aln[0]], query_len))
             for i in in_alns[aln]:
-                f.write('%r\t%r\t%r\t%r\t%r\t%r\t%r\n' % (
+                f.write('%r %r %r %r %r %r %r\n' % (
                     i.ref_start,
                     i.ref_end,
                     i.query_start,
@@ -150,13 +159,13 @@ def write_delta(in_alns, in_file_name):
                 for code in cigar:
                     if code[-1] == 'M':
                         counter += int(code[:-1])
-                    elif code[-1] == 'I':
+                    elif code[-1] == 'D':
                         offsets.append(counter)
                         num_I = int(code[:-1])
                         for i in range(1, num_I):
                             offsets.append(1)
                         counter = 1
-                    elif code[-1] == 'D':
+                    elif code[-1] == 'I':
                         offsets.append(-1*counter)
                         num_I = int(code[:-1])
                         for i in range(1, num_I):

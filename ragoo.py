@@ -366,6 +366,7 @@ if __name__ == "__main__":
         inter_alns = read_paf_alignments('chimera_break/inter_contigs_against_ref.paf')
         inter_alns = clean_alignments(inter_alns, l=1000, in_exclude_file=exclude_file)
 
+        log('-- Finding intrachromosomally chimeric contigs')
         # Find intrachromosomally chimeric contigs
         for i in inter_alns.keys():
             intra = get_intra_contigs(inter_alns[i], 15000, intra_wrt_ref_min, intra_wrt_ctg_min)
