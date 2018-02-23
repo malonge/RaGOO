@@ -34,7 +34,7 @@ def read_contigs(in_file):
     d = dict()
     x = SeqReader(in_file)
     for header, seq in x.parse_fasta():
-        d[header.replace('>', '')] = seq
+        d[header.replace('>', '').split(' ')[0]] = seq
     return d
 
 

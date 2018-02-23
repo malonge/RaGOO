@@ -4,6 +4,7 @@ import copy
 from intervaltree import IntervalTree
 
 from utilities.ContigAlignment import UniqueContigAlignment
+from utilities.ContigAlignment import LongestContigAlignment
 
 
 def get_ref_parts(alns, l, p, r):
@@ -181,6 +182,10 @@ def get_intra_contigs(alns, l, d, c):
     ctg_alns.filter_ref_chroms([best_header])
     ctg_alns.filter_lengths(l)
 
+    # If there are no longer any alignments after length filtering, give up
+    if not len(ctg_alns.ref_headers):
+        return
+
     # Intialize the list of start and end positions w.r.t the query
     query_pos = []
 
@@ -188,7 +193,20 @@ def get_intra_contigs(alns, l, d, c):
         query_pos.append((ctg_alns.ref_starts[i], ctg_alns.ref_ends[i], i))
 
     final_order = [i[2] for i in sorted(query_pos)]
-    ordered_query_ends = [ctg_alns.query_ends[i] for i in final_order]
+
+    # Check to see if this alignment needs to be reverse complemented
+    is_rc = False
+    longest_aln = LongestContigAlignment(ctg_alns)
+    if longest_aln.strand == '-':
+        is_rc = True
+
+    query_starts = ctg_alns.query_starts
+    query_ends = ctg_alns.query_ends
+    if is_rc:
+        query_starts, query_ends = query_ends, query_starts
+
+    ordered_query_ends = [query_ends[i] for i in final_order]
+    ordered_query_starts = [query_starts[i] for i in final_order]
 
     # Make a list of distance between alignments
     # first with respect to (wrt) the reference.
@@ -199,7 +217,7 @@ def get_intra_contigs(alns, l, d, c):
     # next, with respect to (wrt) the contig.
     distances_wrt_ctg = []
     for i in range(len(final_order) - 1):
-        distances_wrt_ctg.append(ctg_alns.query_starts[final_order[i + 1]] - ctg_alns.query_starts[final_order[i]])
+        distances_wrt_ctg.append(abs(query_starts[final_order[i + 1]] - query_starts[final_order[i]]))
 
     # This conditional essentially checks if there are any break points for this contig.
     # Returns None otherwise (no return statement)
@@ -209,5 +227,5 @@ def get_intra_contigs(alns, l, d, c):
             return (ctg_alns.contig, [(0, ordered_query_ends[break_index]), (ordered_query_ends[break_index], ctg_alns.query_lens[0])])
 
         if max(distances_wrt_ctg) > c:
-            break_index = distances_wrt_ctg.index(max(distances_wrt_ctg))
-            return (ctg_alns.contig, [(0, ordered_query_ends[break_index]), (ordered_query_ends[break_index], ctg_alns.query_lens[0])])
+            # Just break at the very start of the contig with respect to the reference order
+            return (ctg_alns.contig, [(0, ordered_query_starts[0]), (ordered_query_starts[0], ctg_alns.query_lens[0])])
