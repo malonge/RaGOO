@@ -131,7 +131,7 @@ class SAMAlignment:
 
 def write_delta(in_alns, in_file_name):
     with open(in_file_name, 'w') as f:
-        f.write('Fake first line\n')
+        f.write('file1 file2\n')
         f.write('NUCMER\n')
         for aln in in_alns.keys():
             query_len = in_alns[aln][0].query_len
