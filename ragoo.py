@@ -275,6 +275,7 @@ if __name__ == "__main__":
     parser.add_argument("-c", metavar="1000000", type=int, default=1000000, help="When findng intrachromosomal chimeras, minimum gap length with respect to the query.")
     parser.add_argument("-d", metavar="20000000", type=int, default=20000000, help="When findng intrachromosomal chimeras, minimum gap length with respect to the reference.")
     parser.add_argument("-t", metavar="3", type=int, default=3, help="Number of threads when running minimap.")
+    parser.add_argument("-g", metavar="100", type=int, default=100, help="Gap size for padding in pseudomolecules.")
 
     # Get the command line arguments
     args = parser.parse_args()
@@ -291,6 +292,7 @@ if __name__ == "__main__":
     intra_wrt_ref_min = args.d
     intra_wrt_ctg_min = args.c
     t = args.t
+    g = args.g
 
     current_path = os.getcwd()
     output_path = current_path + '/ragoo_output'
@@ -428,7 +430,7 @@ if __name__ == "__main__":
     order_contigs(all_unique_contigs)
 
     log('-- Creating Pseudomolecules')
-    create_pseudomolecules(contigs_file, all_unique_contigs, 500)
+    create_pseudomolecules(contigs_file, all_unique_contigs, g)
 
     log('-- Aligning pseudomolecules to reference')
     align_pms(minimap_path, t, reference_file)
