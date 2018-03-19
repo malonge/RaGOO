@@ -254,6 +254,11 @@ def get_SVs():
         f.write(b1)
         f.write(b2)
 
+    # Filter out SVs caused by gaps
+    cmd_5 = 'python3 ~/Projects/RaGOO/filter_gap_SVs.py'
+    if not os.path.isfile('svs_wrt_query.bed'):
+        run(cmd_5)
+
     os.chdir(current_path)
 
 
