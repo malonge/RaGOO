@@ -4,6 +4,14 @@
 
 ## Description
 
+RaGOO is a tool for coalescing genome assembly contigs into pseudochromosomes via minimap2 alignments to a closely related reference genome. The focus of this tool is on practicality and therefore has the following features:
+
+1. In-tact ordering and orienting of contigs so as to retain original sequence content and any analysis that relies on it. 
+2. Lift-over of gff files from the contig-level assembly to the pseudochromosomes.
+3. Structural variant calling with [Assemblytics](http://assemblytics.com/).
+
+RaGOO does not automatically create synteny plots/homology maps, but RaGOO output files can easily passed to visualization tools such as Assemblytics (see "Output Files" below).
+
 ## Installation
 
 ### Dependencies
@@ -27,7 +35,7 @@ $python setup.py install
 
 ```
 usage: ragoo.py [-h] [-e <exclude.txt>] [-gff <annotations.gff>] [-m PATH]
-                [-b] [-t 3] [-g 100]
+                [-b] [-t 3] [-g 100] [-s]
                 <contigs.fasta> <reference.fasta>
 
 order and orient contigs according to minimap2 alignments to a reference
@@ -45,8 +53,11 @@ optional arguments:
   -b                    Break chimeric contigs
   -t 3                  Number of threads when running minimap.
   -g 100                Gap size for padding in pseudomolecules.
+  -s                    Call structural variants
 ```
 
-### Command Line Usage
+Note that one can optionally break chimeric contigs and call structural variants. Turning off SV calling can be especially useful for large genomes such as Maize and Human for which minimap2 SAM alignments might take a very long time. 
+
+RaGOO will try to be smart and not redo intermediate analysis already done in previous executions of the pipeline. For example, if the minimap2 alignment files are already present from previous runs, RaGOO will not recreate them. However, RaGOO is not that smart, so be sure to remove any files that you want to replace. To be safe, one can just remove the entire output directory if a new analysis is desired (see "Output Files" below).
 
 ### Output Files
