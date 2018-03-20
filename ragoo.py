@@ -280,7 +280,7 @@ if __name__ == "__main__":
     parser.add_argument("-d", metavar="20000000", type=int, default=20000000, help=argparse.SUPPRESS    )
     parser.add_argument("-t", metavar="3", type=int, default=3, help="Number of threads when running minimap.")
     parser.add_argument("-g", metavar="100", type=int, default=100, help="Gap size for padding in pseudomolecules.")
-    parser.add_argument("-s", action='store_true', default=True, help="Call structural variants")
+    parser.add_argument("-s", action='store_true', default=False, help="Call structural variants")
 
     # Get the command line arguments
     args = parser.parse_args()
