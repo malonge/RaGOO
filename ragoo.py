@@ -223,19 +223,19 @@ def get_SVs():
     current_path = os.getcwd()
     os.chdir('pm_alignments')
     # Change this when setup.py is ready. Just call script directly
-    cmd = 'python3 ~/Projects/RaGOO/sam2delta.py pm_against_ref.sam'
+    cmd = 'sam2delta.py pm_against_ref.sam'
     if not os.path.isfile('pm_against_ref.sam.delta'):
         run(cmd)
 
-    cmd_2 = 'python3 ~/Projects/RaGOO/Assemblytics_uniq_anchor.py --delta pm_against_ref.sam.delta --unique-length 10000 --out assemblytics_out --keep-small-uniques'
+    cmd_2 = 'Assemblytics_uniq_anchor.py --delta pm_against_ref.sam.delta --unique-length 10000 --out assemblytics_out --keep-small-uniques'
     if not os.path.isfile('assemblytics_out.Assemblytics.unique_length_filtered_l10000.delta'):
         run(cmd_2)
 
-    cmd_3 = '~/Projects/RaGOO/Assemblytics_between_alignments.pl assemblytics_out.coords.tab 50 10000 all-chromosomes exclude-longrange bed > assemblytics_out.variants_between_alignments.bed'
+    cmd_3 = 'Assemblytics_between_alignments.pl assemblytics_out.coords.tab 50 10000 all-chromosomes exclude-longrange bed > assemblytics_out.variants_between_alignments.bed'
     if not os.path.isfile('assemblytics_out.variants_between_alignments.bed'):
         run(cmd_3)
 
-    cmd_4 = 'python3 ~/Projects/RaGOO/Assemblytics_within_alignment.py --delta assemblytics_out.Assemblytics.unique_length_filtered_l10000.delta --min 50 > assemblytics_out.variants_within_alignments.bed'
+    cmd_4 = 'Assemblytics_within_alignment.py --delta assemblytics_out.Assemblytics.unique_length_filtered_l10000.delta --min 50 > assemblytics_out.variants_within_alignments.bed'
     if not os.path.isfile('assemblytics_out.variants_within_alignments.bed'):
         run(cmd_4)
 
@@ -254,7 +254,7 @@ def get_SVs():
         f.write(b2)
 
     # Filter out SVs caused by gaps
-    cmd_5 = 'python3 ~/Projects/RaGOO/filter_gap_SVs.py'
+    cmd_5 = 'filter_gap_SVs.py'
     if not os.path.isfile('svs_wrt_query.bed'):
         run(cmd_5)
 

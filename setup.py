@@ -1,7 +1,7 @@
 from setuptools import setup
 import glob
 
-scripts = glob.glob("*.py")
+scripts = glob.glob("*.p*")
 
 setup(
     name='RaGOO',
