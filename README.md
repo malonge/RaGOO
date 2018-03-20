@@ -24,13 +24,15 @@ RaGOO should install on OSX and most standard flavors of Linux. RaGOO depends on
 3. [bedtools](http://bedtools.readthedocs.io/en/latest/index.html)
 4. [minimap2](https://github.com/lh3/minimap2)
 
-The first two packages will be installed automatically when installing RaGOO. The last two are straightforward to install following the instructions on their respective websites. RaGOO expects bedtools to be installed globally and for the bedtools executables to be in ones path, however, the location of the minimap2 executable can optionally passed to RaGOO if not installed globally (see "Usage" below).  
+The first two packages will be installed automatically when installing RaGOO. The last two are straightforward to install following the instructions on their respective websites. RaGOO expects bedtools to be installed globally and for the bedtools executables to be in ones path, however, the location of the minimap2 executable can optionally be passed to RaGOO if not installed globally (see "Usage" below).  
 
 ### Installation
 
 Currently, the only way to install RaGOO is from source. Set up a virtualenv if desired, just be sure to make a python3 environment. Then, enter the following command to install RaGOO and its dependencies:
 
+```
 $python setup.py install
+```
 
 ## Usage
 
