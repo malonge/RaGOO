@@ -3,8 +3,8 @@ import copy
 
 from intervaltree import IntervalTree
 
-from utilities.ContigAlignment import UniqueContigAlignment
-from utilities.ContigAlignment import LongestContigAlignment
+from ragoo_utilities.ContigAlignment import UniqueContigAlignment
+from ragoo_utilities.ContigAlignment import LongestContigAlignment
 
 
 def get_ref_parts(alns, l, p, r):

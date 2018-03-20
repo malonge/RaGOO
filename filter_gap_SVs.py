@@ -1,8 +1,8 @@
 import os
 import re
 
-from utilities.SeqReader import SeqReader
-from utilities.utilities import run
+from ragoo_utilities.SeqReader import SeqReader
+from ragoo_utilities.utilities import run
 
 
 class BaseSequence(object):

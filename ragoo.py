@@ -1,14 +1,13 @@
 from collections import defaultdict
 
-from utilities.PAFReader import PAFReader
-from utilities.SeqReader import SeqReader
-from utilities.ContigAlignment import ContigAlignment
-from utilities.ContigAlignment import UniqueContigAlignment
-from utilities.ContigAlignment import LongestContigAlignment
-from utilities.GFFReader import GFFReader
-from utilities.utilities import run, log, reverse_complement, read_contigs
-from utilities.break_chimera import get_ref_parts, cluster_contig_alns, avoid_gff_intervals, update_gff, break_contig, get_intra_contigs
-import shutil
+from ragoo_utilities.PAFReader import PAFReader
+from ragoo_utilities.SeqReader import SeqReader
+from ragoo_utilities.ContigAlignment import ContigAlignment
+from ragoo_utilities.ContigAlignment import UniqueContigAlignment
+from ragoo_utilities.ContigAlignment import LongestContigAlignment
+from ragoo_utilities.GFFReader import GFFReader
+from ragoo_utilities.utilities import run, log, reverse_complement, read_contigs
+from ragoo_utilities.break_chimera import get_ref_parts, cluster_contig_alns, avoid_gff_intervals, update_gff, break_contig, get_intra_contigs
 
 
 def write_contig_clusters(unique_dict):

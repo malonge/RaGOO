@@ -1,7 +1,7 @@
 import operator
 from collections import defaultdict
 
-from utilities.utilities import summarize_planesweep, binary_search
+from ragoo_utilities.utilities import summarize_planesweep, binary_search
 
 
 class ContigAlignment:

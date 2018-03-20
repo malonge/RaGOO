@@ -2,7 +2,7 @@ import time
 import subprocess
 import operator
 
-from utilities.SeqReader import SeqReader
+from ragoo_utilities.SeqReader import SeqReader
 
 """ A collection of various helper functions"""
 
