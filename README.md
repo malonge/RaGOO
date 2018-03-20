@@ -6,9 +6,10 @@
 
 RaGOO is a tool for coalescing genome assembly contigs into pseudochromosomes via minimap2 alignments to a closely related reference genome. The focus of this tool is on practicality and therefore has the following features:
 
-1. In-tact ordering and orienting of contigs so as to retain original sequence content and any analysis that relies on it. 
-2. Lift-over of gff files from the contig-level assembly to the pseudochromosomes.
-3. Structural variant calling with [Assemblytics](http://assemblytics.com/).
+1. Good performance. On a MacBook Pro using Arabidopsis data, pseudochromosome construction takes less than a minute and the whole pipeline with SV calling takes ~ 2 minutes.
+2. In-tact ordering and orienting of contigs so as to retain original sequence content and any analysis that relies on it. 
+3. Lift-over of gff files from the contig-level assembly to the pseudochromosomes.
+4. Structural variant calling with [Assemblytics](http://assemblytics.com/).
 
 RaGOO does not automatically create synteny plots/homology maps, but RaGOO output files can easily passed to visualization tools such as Assemblytics (see "Output Files" below).
 
