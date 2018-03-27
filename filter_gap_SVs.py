@@ -53,16 +53,23 @@ def make_svs_bed(in_trees):
         # Calculate the percentage overlap for each structural variant.
         for line in f:
             pct_ovlp = 0
+            ovlp = 0
             L1 = line.rstrip().split('\t')
             head, start, end = get_bed_coords(L1[9])
             query = in_trees[head][start:end]
             if query:
-                interval = list(query)[0]
-                gap_start, gap_end= interval.begin, interval.end
+                for interval in query:
+                    gap_start, gap_end= interval.begin, interval.end
 
-                # Calculate the amount these to intervals overlap
-                ovlp = max(0, min(end, gap_end) - max(start, gap_start))
+                    # Calculate the amount these to intervals overlap
+                    ovlp += max(0, min(end, gap_end) - max(start, gap_start))
+
                 pct_ovlp = ovlp/(end-start)
+
+                if L1[3] == 'Assemblytics_b_2':
+                    print(ovlp)
+                    print(pct_ovlp)
+                    print(start, end)
 
             # Add the new value to the original line
             L1.append(pct_ovlp)
@@ -71,9 +78,6 @@ def make_svs_bed(in_trees):
 
     with open('assemblytics_out.Assemblytics_structural_variants.bed', 'w') as out_file:
         out_file.write('\n'.join(final_lines))
-
-
-
 
 
 def main():
