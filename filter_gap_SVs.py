@@ -47,7 +47,7 @@ def make_svs_bed(in_trees):
     with open('assemblytics_out.Assemblytics_structural_variants.bed', 'r') as f:
 
         # Make a new header column for the field I am about to create
-        header = f.readline().rstrip() + '\tpct_gap_ovlp'
+        header = f.readline().rstrip() + '\tgap_ovlp'
         final_lines.append(header)
 
         # Calculate the percentage overlap for each structural variant.
