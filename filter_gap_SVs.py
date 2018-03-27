@@ -66,11 +66,6 @@ def make_svs_bed(in_trees):
 
                 pct_ovlp = ovlp/(end-start)
 
-                if L1[3] == 'Assemblytics_b_2':
-                    print(ovlp)
-                    print(pct_ovlp)
-                    print(start, end)
-
             # Add the new value to the original line
             L1.append(pct_ovlp)
             L1 = [str(i) for i in L1]
