@@ -36,7 +36,7 @@ def clean_alignments(in_alns, l=10000, in_exclude_file='', uniq_anchor_filter=Fa
     if in_exclude_file:
         with open('../' + in_exclude_file) as f:
             for line in f:
-                exclude_list.append(line.rstrip())
+                exclude_list.append(line.rstrip().replace('>', '').split()[0])
 
     empty_headers = []
     for header in in_alns.keys():
@@ -255,8 +255,7 @@ def get_SVs():
 
     # Filter out SVs caused by gaps
     cmd_5 = 'filter_gap_SVs.py'
-    if not os.path.isfile('svs_wrt_query.bed'):
-        run(cmd_5)
+    run(cmd_5)
 
     os.chdir(current_path)
 
