@@ -219,7 +219,7 @@ def align_pms(m_path, num_threads, in_reference_file):
     os.chdir(current_path)
 
 
-def get_SVs(sv_min, sv_max):
+def get_SVs(sv_min, sv_max, in_ref_file):
     current_path = os.getcwd()
     os.chdir('pm_alignments')
     # Change this when setup.py is ready. Just call script directly
@@ -254,7 +254,7 @@ def get_SVs(sv_min, sv_max):
         f.write(b2)
 
     # Filter out SVs caused by gaps
-    cmd_5 = 'filter_gap_SVs.py'
+    cmd_5 = 'filter_gap_SVs.py ../../%s' %(in_ref_file)
     run(cmd_5)
 
     os.chdir(current_path)
@@ -446,6 +446,6 @@ if __name__ == "__main__":
         align_pms(minimap_path, t, reference_file)
 
         log('-- Getting structural variants')
-        get_SVs(a, f)
+        get_SVs(a, f, reference_file)
 
     log('-- goodbye')
