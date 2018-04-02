@@ -219,7 +219,7 @@ def align_pms(m_path, num_threads, in_reference_file):
     os.chdir(current_path)
 
 
-def get_SVs():
+def get_SVs(sv_min, sv_max):
     current_path = os.getcwd()
     os.chdir('pm_alignments')
     # Change this when setup.py is ready. Just call script directly
@@ -231,11 +231,11 @@ def get_SVs():
     if not os.path.isfile('assemblytics_out.Assemblytics.unique_length_filtered_l10000.delta'):
         run(cmd_2)
 
-    cmd_3 = 'Assemblytics_between_alignments.pl assemblytics_out.coords.tab 50 10000 all-chromosomes exclude-longrange bed > assemblytics_out.variants_between_alignments.bed'
+    cmd_3 = 'Assemblytics_between_alignments.pl assemblytics_out.coords.tab %r %r all-chromosomes exclude-longrange bed > assemblytics_out.variants_between_alignments.bed' %(sv_min, sv_max)
     if not os.path.isfile('assemblytics_out.variants_between_alignments.bed'):
         run(cmd_3)
 
-    cmd_4 = 'Assemblytics_within_alignment.py --delta assemblytics_out.Assemblytics.unique_length_filtered_l10000.delta --min 50 > assemblytics_out.variants_within_alignments.bed'
+    cmd_4 = 'Assemblytics_within_alignment.py --delta assemblytics_out.Assemblytics.unique_length_filtered_l10000.delta --min %r > assemblytics_out.variants_within_alignments.bed' %(sv_min)
     if not os.path.isfile('assemblytics_out.variants_within_alignments.bed'):
         run(cmd_4)
 
@@ -280,6 +280,8 @@ if __name__ == "__main__":
     parser.add_argument("-t", metavar="3", type=int, default=3, help="Number of threads when running minimap.")
     parser.add_argument("-g", metavar="100", type=int, default=100, help="Gap size for padding in pseudomolecules.")
     parser.add_argument("-s", action='store_true', default=False, help="Call structural variants")
+    parser.add_argument("-a", metavar="50", type=int, default=50, help=argparse.SUPPRESS)
+    parser.add_argument("-f", metavar="10000", type=int, default=10000, help=argparse.SUPPRESS)
 
     # Get the command line arguments
     args = parser.parse_args()
@@ -298,6 +300,8 @@ if __name__ == "__main__":
     t = args.t
     g = args.g
     call_svs = args.s
+    a = args.a
+    f = args.f
 
     current_path = os.getcwd()
     output_path = current_path + '/ragoo_output'
@@ -442,6 +446,6 @@ if __name__ == "__main__":
         align_pms(minimap_path, t, reference_file)
 
         log('-- Getting structural variants')
-        get_SVs()
+        get_SVs(a, f)
 
     log('-- goodbye')
