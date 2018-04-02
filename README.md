@@ -21,10 +21,9 @@ RaGOO should install on OSX and most standard flavors of Linux. RaGOO depends on
 
 1. [intervaltree](https://pypi.python.org/pypi/intervaltree)
 2. numpy
-3. [bedtools](http://bedtools.readthedocs.io/en/latest/index.html)
-4. [minimap2](https://github.com/lh3/minimap2)
+3. [minimap2](https://github.com/lh3/minimap2)
 
-The first two packages will be installed automatically when installing RaGOO. The last two are straightforward to install following the instructions on their respective websites. RaGOO expects bedtools to be installed globally and for the bedtools executables to be in ones path, however, the location of the minimap2 executable can optionally be passed to RaGOO if not installed globally (see "Usage" below).  
+The first two packages will be installed automatically when installing RaGOO. minimap2 is straightforward to install following the instructions on its website.
 
 ### Installation
 
