@@ -224,7 +224,10 @@ def get_intra_contigs(alns, l, d, c):
     if distances_wrt_ref:
         if max(distances_wrt_ref) > d:
             break_index = distances_wrt_ref.index(max(distances_wrt_ref))
-            return (ctg_alns.contig, [(0, ordered_query_ends[break_index]), (ordered_query_ends[break_index], ctg_alns.query_lens[0])])
+            if ordered_query_starts[break_index] < ordered_query_ends[break_index]:
+                return (ctg_alns.contig, [(0, ordered_query_starts[break_index]), (ordered_query_starts[break_index], ctg_alns.query_lens[0])])
+            else:
+                return (ctg_alns.contig, [(0, ordered_query_ends[break_index]), (ordered_query_ends[break_index], ctg_alns.query_lens[0])])
 
         if max(distances_wrt_ctg) > c:
             # Just break at the very start of the contig with respect to the reference order
