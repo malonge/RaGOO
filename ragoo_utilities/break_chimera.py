@@ -195,15 +195,9 @@ def get_intra_contigs(alns, l, d, c):
     final_order = [i[2] for i in sorted(query_pos)]
 
     # Check to see if this alignment needs to be reverse complemented
-    is_rc = False
-    longest_aln = LongestContigAlignment(ctg_alns)
-    if longest_aln.strand == '-':
-        is_rc = True
 
     query_starts = ctg_alns.query_starts
     query_ends = ctg_alns.query_ends
-    if is_rc:
-        query_starts, query_ends = query_ends, query_starts
 
     ordered_query_ends = [query_ends[i] for i in final_order]
     ordered_query_starts = [query_starts[i] for i in final_order]
