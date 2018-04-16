@@ -120,6 +120,24 @@ class ContigAlignment:
         self.aln_lens = [self.aln_lens[i] for i in hits]
         self.mapqs = [self.mapqs[i] for i in hits]
 
+    def sort_by_ref(self):
+        ref_pos = []
+        for i in range(len(self.ref_headers)):
+            ref_pos.append((self.ref_starts[i], self.ref_ends[i], i))
+        hits = [i[2] for i in sorted(ref_pos)]
+
+        self.query_lens = [self.query_lens[i] for i in hits]
+        self.query_starts = [self.query_starts[i] for i in hits]
+        self.query_ends = [self.query_ends[i] for i in hits]
+        self.strands = [self.strands[i] for i in hits]
+        self.ref_headers = [self.ref_headers[i] for i in hits]
+        self.ref_lens = [self.ref_lens[i] for i in hits]
+        self.ref_starts = [self.ref_starts[i] for i in hits]
+        self.ref_ends = [self.ref_ends[i] for i in hits]
+        self.num_matches = [self.num_matches[i] for i in hits]
+        self.aln_lens = [self.aln_lens[i] for i in hits]
+        self.mapqs = [self.mapqs[i] for i in hits]
+
     def exclude_ref_chroms(self, exclude_list):
         hits = []
         for i in range(len(self.ref_headers)):

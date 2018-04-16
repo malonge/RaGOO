@@ -187,41 +187,66 @@ def get_intra_contigs(alns, l, d, c):
         return
 
     # Sort the alignments with respect to the reference start and end positions.
-    ref_pos = []
-    for i in range(len(ctg_alns.ref_headers)):
-        ref_pos.append((ctg_alns.ref_starts[i], ctg_alns.ref_ends[i], i))
-    final_order = [i[2] for i in sorted(ref_pos)]
-
-    # Get a sorted list of alignment positions with respect to the query
-    ordered_query_ends = [ctg_alns.query_ends[i] for i in final_order]
-    ordered_query_starts = [ctg_alns.query_starts[i] for i in final_order]
+    ctg_alns.sort_by_ref()
 
     # Make a list of distance between alignments
     # first with respect to (wrt) the reference.
     distances_wrt_ref = []
-    for i in range(len(final_order)-1):
-        distances_wrt_ref.append(ctg_alns.ref_starts[final_order[i+1]] - ctg_alns.ref_starts[final_order[i]])
+    for i in range(len(ctg_alns.ref_headers)-1):
+        distances_wrt_ref.append(ctg_alns.ref_starts[i+1] - ctg_alns.ref_starts[i])
 
     # next, with respect to (wrt) the contig.
     distances_wrt_ctg = []
-    for i in range(len(final_order) - 1):
-        distances_wrt_ctg.append(abs(ctg_alns.query_starts[final_order[i + 1]] - ctg_alns.query_starts[final_order[i]]))
+    for i in range(len(ctg_alns.ref_headers) - 1):
+        distances_wrt_ctg.append(abs(ctg_alns.query_starts[i + 1] - ctg_alns.query_starts[i]))
+
+    # Next, assign the following two identities.
+    #  1. When ordered by the reference, the alignments start at the beginning or the end of the query
+    #  2. For the alignment which will be broken on, is it on the forward or reverse strand.
+
+    is_query_start = True
+
+    if ctg_alns.query_starts[0] >= ctg_alns.query_lens[0]/2:
+        is_query_start = False
 
     # This conditional essentially checks if there are any break points for this contig.
     # Returns None otherwise (no return statement)
     if distances_wrt_ref:
         if max(distances_wrt_ref) > d:
-            break_index = distances_wrt_ref.index(max(distances_wrt_ref))
-            print(ctg_alns.contig, ctg_alns.ref_headers[0])
-            print([ctg_alns.strands[i] for i in final_order])
-            print([(i, j) for i, j in zip(ordered_query_starts, ordered_query_ends)])
-            print(distances_wrt_ref)
-            print(break_index)
-            if ordered_query_starts[break_index] < ordered_query_ends[break_index]:
-                return (ctg_alns.contig, [(0, ordered_query_starts[break_index]), (ordered_query_starts[break_index], ctg_alns.query_lens[0])])
+            gap_index = distances_wrt_ref.index(max(distances_wrt_ref))
+            a_alns_strands = ctg_alns.strands[:gap_index]
+            if is_query_start:
+                if a_alns_strands.count('-') > a_alns_strands.count('+'):
+                    # The first subcontig is on the reverse strand
+                    return (ctg_alns.contig, [(0, ctg_alns.query_ends[0]), (ctg_alns.query_ends[0], ctg_alns.query_lens[0])])
+                else:
+                    # The first subcontig is on the forward strand.
+                    return (ctg_alns.contig, [(0, ctg_alns.query_ends[gap_index]), (ctg_alns.query_ends[gap_index], ctg_alns.query_lens[0])])
             else:
-                return (ctg_alns.contig, [(0, ordered_query_ends[break_index]), (ordered_query_ends[break_index], ctg_alns.query_lens[0])])
+                # The first subcontig starts at the end of the contig
+                if a_alns_strands.count('-') > a_alns_strands.count('+'):
+                    # The first subcontig is on the reverse strand
+                    return (ctg_alns.contig, [(0, ctg_alns.query_starts[gap_index]), (ctg_alns.query_starts[gap_index], ctg_alns.query_lens[0])])
+                else:
+                    # The first subcontig is on the forward strand.
+                    return (ctg_alns.contig, [(0, ctg_alns.query_starts[0]), (ctg_alns.query_starts[0], ctg_alns.query_lens[0])])
 
         if max(distances_wrt_ctg) > c:
-            # Just break at the very start of the contig with respect to the reference order
-            return (ctg_alns.contig, [(0, ordered_query_starts[0]), (ordered_query_starts[0], ctg_alns.query_lens[0])])
+            gap_index = distances_wrt_ctg.index(max(distances_wrt_ctg)) + 1
+            a_alns_strands = ctg_alns.strands[:gap_index]
+            if is_query_start:
+                if a_alns_strands.count('-') > a_alns_strands.count('+'):
+                    # The first subcontig is on the reverse strand
+                    return (ctg_alns.contig, [(0, ctg_alns.query_ends[0]), (ctg_alns.query_ends[0], ctg_alns.query_lens[0])])
+                else:
+                    # The first subcontig is on the forward strand.
+                    return (ctg_alns.contig, [(0, ctg_alns.query_ends[gap_index]), (ctg_alns.query_ends[gap_index], ctg_alns.query_lens[0])])
+            else:
+                # The first subcontig starts at the end of the contig
+                if a_alns_strands.count('-') > a_alns_strands.count('+'):
+                    # The first subcontig is on the reverse strand
+                    return (ctg_alns.contig, [(0, ctg_alns.query_starts[gap_index]), (ctg_alns.query_starts[gap_index], ctg_alns.query_lens[0])])
+                else:
+                    # The first subcontig is on the forward strand.
+                    return (ctg_alns.contig, [(0, ctg_alns.query_starts[0]), (ctg_alns.query_starts[0], ctg_alns.query_lens[0])])
+
