@@ -24,9 +24,10 @@ def write_contig_clusters(unique_dict):
 
     for i in unique_dict.keys():
         this_chr = unique_dict[i].ref_chrom
+        this_confidence = unique_dict[i].confidence
         file_name = str(this_chr) + '_contigs.txt'
         with open(file_name, 'a') as f:
-            f.write(i + '\n')
+            f.write(i + '\t' + str(this_confidence) + '\n')
     os.chdir(current_path)
 
 
@@ -66,11 +67,11 @@ def read_paf_alignments(in_paf):
     return alns
 
 
-def get_contigs(in_file):
+def get_contigs_from_groupings(in_file):
     contigs = []
     with open(in_file) as f:
         for line in f:
-            contigs.append(line.rstrip())
+            contigs.append(line.split('\t')[0])
     return contigs
 
 
@@ -90,7 +91,7 @@ def order_contigs(in_unique_contigs):
         ref_pos = []
 
         groupings_file = 'groupings/' + this_chrom + '_contigs.txt'
-        contigs_list = get_contigs(groupings_file)
+        contigs_list = get_contigs_from_groupings(groupings_file)
 
         # Add edges for each of n choose 2 pairs of alignments
         for i in range(len(contigs_list)):

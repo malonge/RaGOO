@@ -222,6 +222,7 @@ class UniqueContigAlignment:
 
         # Find the chromosome which was covered the most in these alignments.
         self.ref_chrom = None
+        self.confidence = 0.0
         self._get_best_ref_cov(in_contig_aln)
 
     def __str__(self):
@@ -232,6 +233,7 @@ class UniqueContigAlignment:
         all_chroms = set(alns.ref_headers)
         if len(all_chroms) == 1:
             self.ref_chrom = alns.ref_headers[0]
+            self.confidence = 1
             return
 
         # Initialize coverage counts for each chromosome
@@ -260,6 +262,11 @@ class UniqueContigAlignment:
         max_chrom = max(ranges.items(), key=operator.itemgetter(1))[0]
         self.ref_chrom = max_chrom
 
+        # Now get the confidence of this chromosome assignment
+        # Equal to the max range over all ranges
+        self.confidence = ranges[max_chrom]/sum(ranges.values())
+        assert self.confidence >= 0
+        assert self.confidence <= 1
 
 class LongestContigAlignment:
     """
