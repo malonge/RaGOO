@@ -208,12 +208,9 @@ class ContigAlignment:
 
 class UniqueContigAlignment:
     """
-    Similar to the contig alignment class, but only the "best" alignment will be retained.
-    So given a ContigAlignment upon instantiation, this will find the best one and save it.
-
-    "Best" will mean a few different things as I go along with testing.
-
-    BUG: If the only alignments a contig contains are in the excluded list, it will pick a chromosome from the excluded list.
+    A class representing the reference chromosome to which a particular contig will be assigned to.
+    At first, the incoming alignments may be to multiple chromosomes, but this class will assign a single
+    reference chromosome to an input contig.
     """
 
     def __init__(self, in_contig_aln):
@@ -236,6 +233,7 @@ class UniqueContigAlignment:
         if len(all_chroms) == 1:
             self.ref_chrom = alns.ref_headers[0]
             return
+
         # Initialize coverage counts for each chromosome
         ranges = dict()
         for i in all_chroms:
