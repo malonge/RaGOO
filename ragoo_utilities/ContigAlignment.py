@@ -26,7 +26,7 @@ class ContigAlignment:
         All other alignment metrics will be stored in lists, where the list offsets
         correspond to the alignment number.
 
-        Dont actually add any alignments through object instantiation. Only use the add_alignment method.
+        Don't actually add any alignments through object instantiation. Only use the add_alignment method.
         """
         self.contig = in_contig
 

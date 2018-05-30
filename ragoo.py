@@ -1,4 +1,7 @@
 from collections import defaultdict
+import copy
+
+from intervaltree import IntervalTree
 
 from ragoo_utilities.PAFReader import PAFReader
 from ragoo_utilities.SeqReader import SeqReader
@@ -75,16 +78,98 @@ def get_contigs_from_groupings(in_file):
     return contigs
 
 
-def order_contigs(in_unique_contigs):
+def get_location_confidence(in_ctg_alns):
+    # Use interval tree to get all alignments with the reference span
+    # Go through each of them and if any start is less than the min_pos or any end is greater than
+    # the max_pos, change the borders to those values. Then use the algorithm that Mike gave me.
+    min_pos = min(in_ctg_alns.ref_starts)
+    max_pos = max(in_ctg_alns.ref_ends)
+    t = IntervalTree()
+
+    # Put the reference start and end position for every alignment into the tree
+    for i in range(len(in_ctg_alns.ref_headers)):
+        t[in_ctg_alns.ref_starts[i]:in_ctg_alns.ref_ends[i]] = (in_ctg_alns.ref_starts[i], in_ctg_alns.ref_ends[i])
+
+    overlaps = t[min_pos:max_pos]
+    if not overlaps:
+        return 0
+
+    # If any intervals fall beyond the boundaries, replace the start/end with the boundary it exceeds
+    ovlp_list = [i.data for i in overlaps]
+    bounded_list = []
+    for i in ovlp_list:
+        if i[0] < min_pos:
+            i[0] = min_pos
+        if i[1] > max_pos:
+            i[1] = max_pos
+        bounded_list.append(i)
+
+    # Now can just calculate the total range covered by the intervals
+    ovlp_range = 0
+    sorted_intervals = sorted(bounded_list, key=lambda tup: tup[0])
+    max_end = -1
+    for j in sorted_intervals:
+        start_new_terr = max(j[0], max_end)
+        ovlp_range += max(0, j[1] - start_new_terr)
+        max_end = max(max_end, j[1])
+
+    return ovlp_range / (max_pos - min_pos)
+
+
+def order_orient_contigs(in_unique_contigs, in_alns):
     current_path = os.getcwd()
     output_path = current_path + '/orderings'
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
+    # Get longest alignments
+    longest_contigs = dict()
+    for i in in_alns.keys():
+        # Only consider alignments to the assigned chromosome
+        uniq_aln = UniqueContigAlignment(in_alns[i])
+        best_header = uniq_aln.ref_chrom
+        ctg_alns = copy.deepcopy(in_alns[i])
+        ctg_alns.filter_ref_chroms([best_header])
+        longest_contigs[i] = LongestContigAlignment(ctg_alns)
+
+    # Save the orientations
+    final_orientations = dict()
+    for i in longest_contigs.keys():
+        final_orientations[i] = longest_contigs[i].strand
+
+    # Get the location and orientation confidence scores
+    orientation_confidence = dict()
+    location_confidence = dict()
+    forward_bp = 0
+    reverse_bp = 0
+    for i in in_alns.keys():
+        uniq_aln = UniqueContigAlignment(in_alns[i])
+        best_header = uniq_aln.ref_chrom
+        ctg_alns = copy.deepcopy(in_alns[i])
+        ctg_alns.filter_ref_chroms([best_header])
+
+        # Orientation confidence scores
+        # Every base pair votes for the orientation of the alignment in which it belongs
+        # Score is # votes for the assigned orientation over all votes
+        for j in range(len(ctg_alns.ref_headers)):
+            if ctg_alns.strands[j] == '+':
+                forward_bp += ctg_alns.aln_lens[j]
+            else:
+                reverse_bp += ctg_alns.aln_lens[j]
+
+        if final_orientations[i] == '+':
+            orientation_confidence[i] = forward_bp / (forward_bp + reverse_bp)
+        else:
+            orientation_confidence[i] = reverse_bp / (forward_bp + reverse_bp)
+
+        forward_bp = 0
+        reverse_bp = 0
+
+        # Location confidence
+        location_confidence[i] = get_location_confidence(ctg_alns)
+
     all_chroms = set([in_unique_contigs[i].ref_chrom for i in in_unique_contigs.keys()])
 
-    # For chromosome 0, this reports all contigs in alignments not placed.
-    # But it still does not report all contigs not even in alignments in the first place.
     for this_chrom in all_chroms:
 
         # Intialize the list of start and end positions w.r.t the query
@@ -93,15 +178,20 @@ def order_contigs(in_unique_contigs):
         groupings_file = 'groupings/' + this_chrom + '_contigs.txt'
         contigs_list = get_contigs_from_groupings(groupings_file)
 
-        # Add edges for each of n choose 2 pairs of alignments
         for i in range(len(contigs_list)):
+            # There is a scope issue here. Pass this (longest_contigs) to the method explicitly.
             ref_pos.append((longest_contigs[contigs_list[i]].ref_start, longest_contigs[contigs_list[i]].ref_end, i))
 
         final_order = [contigs_list[i[2]] for i in sorted(ref_pos)]
 
+        # Get ordering confidence
+        # To do this, get the max and min alignments to this reference chromosome
+        # Then within that region, what percent of bp are covered
+
         with open('orderings/' + this_chrom + '_orderings.txt', 'w') as out_file:
             for i in final_order:
-                out_file.write(i + '\t' + final_orientations[i] + '\n')
+                # Also have a scope issue here.
+                out_file.write(i + '\t' + final_orientations[i] + '\t' + str(location_confidence[i]) + '\t' + str(orientation_confidence[i]) + '\n')
 
 
 def get_orderings(in_orderings_file):
@@ -425,19 +515,8 @@ if __name__ == "__main__":
     # Add to this the list of headers that did not make it
     write_contig_clusters(all_unique_contigs)
 
-    # Get longest alignments
-    longest_contigs = dict()
-    for i in alns.keys():
-        longest_contigs[i] = LongestContigAlignment(alns[i])
-
-    log('-- Orienting Contigs')
-    # Save the orientations
-    final_orientations = dict()
-    for i in longest_contigs.keys():
-        final_orientations[i] = longest_contigs[i].strand
-
-    log('-- Ordering Contigs')
-    order_contigs(all_unique_contigs)
+    log('-- Ordering and orienting contigs')
+    order_orient_contigs(all_unique_contigs, alns)
 
     log('-- Creating Pseudomolecules')
     create_pseudomolecules(contigs_file, all_unique_contigs, g)

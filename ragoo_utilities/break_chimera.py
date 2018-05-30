@@ -4,7 +4,6 @@ import copy
 from intervaltree import IntervalTree
 
 from ragoo_utilities.ContigAlignment import UniqueContigAlignment
-from ragoo_utilities.ContigAlignment import LongestContigAlignment
 
 
 def get_ref_parts(alns, l, p, r):
