@@ -244,7 +244,7 @@ def get_intra_contigs(alns, l, d, c):
                 # The first subcontig starts at the end of the contig
                 if a_alns_strands.count('-') > a_alns_strands.count('+'):
                     # The first subcontig is on the reverse strand
-                    return (ctg_alns.contig, [(0, ctg_alns.query_starts[gap_index]), (ctg_alns.query_starts[gap_index], ctg_alns.query_lens[0])])
+                    return (ctg_alns.contig, [(0, ctg_alns.query_starts[gap_index-1]), (ctg_alns.query_starts[gap_index-1], ctg_alns.query_lens[0])])
                 else:
                     # The first subcontig is on the forward strand.
                     return (ctg_alns.contig, [(0, ctg_alns.query_starts[0]), (ctg_alns.query_starts[0], ctg_alns.query_lens[0])])
