@@ -205,7 +205,7 @@ def get_intra_contigs(alns, l, d, c):
 
     is_query_start = True
 
-    if ctg_alns.query_starts[0] >= ctg_alns.query_lens[0]/2:
+    if ctg_alns.query_starts[0] >= ctg_alns.query_lens[0]/5:
         is_query_start = False
 
     # This conditional essentially checks if there are any break points for this contig.
