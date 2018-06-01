@@ -367,7 +367,7 @@ if __name__ == "__main__":
     parser.add_argument("-l", metavar="10000", type=int, default=10000, help=argparse.SUPPRESS)
     parser.add_argument("-r", metavar="100000", type=int, default=100000, help=argparse.SUPPRESS)
     parser.add_argument("-c", metavar="1000000", type=int, default=1000000, help=argparse.SUPPRESS)
-    parser.add_argument("-d", metavar="20000000", type=int, default=20000000, help=argparse.SUPPRESS    )
+    parser.add_argument("-d", metavar="2000000", type=int, default=2000000, help=argparse.SUPPRESS)
     parser.add_argument("-t", metavar="3", type=int, default=3, help="Number of threads when running minimap.")
     parser.add_argument("-g", metavar="100", type=int, default=100, help="Gap size for padding in pseudomolecules.")
     parser.add_argument("-s", action='store_true', default=False, help="Call structural variants")
