@@ -422,6 +422,10 @@ if __name__ == "__main__":
 
     # Break chimeras if desired
     if break_chimeras:
+        # Record how many contigs are broken
+        total_inter_broken = 0
+        total_intra_broken = 0
+
         alns = clean_alignments(alns, l=10000, in_exclude_file=exclude_file, uniq_anchor_filter=True)
         # Process contigs
         log('-- Getting contigs')
@@ -450,6 +454,7 @@ if __name__ == "__main__":
 
             # Break contigs according to the final break points
             contigs_dict = break_contig(contigs_dict, i, break_intervals[i])
+            total_inter_broken += 1
 
         # Next, need to re-align before finding intrachromosomal chimeras
         # First, write out the interchromosomal chimera broken fasta
@@ -483,6 +488,8 @@ if __name__ == "__main__":
 
                 # break the contigs and update features if desired
                 contigs_dict = break_contig(contigs_dict, intra[0], intra_break_intervals)
+                total_intra_broken += 1
+
                 if gff_file:
                     features = update_gff(features, intra_break_intervals, intra[0])
 
@@ -503,6 +510,8 @@ if __name__ == "__main__":
         alns = read_paf_alignments('chimera_break/intra_contigs_against_ref.paf')
         alns = clean_alignments(alns, l=1000, in_exclude_file=exclude_file)
         contigs_file = '/ragoo_output/chimera_break/' + out_intra_fasta
+        log('-- The total number of interchromasomally chimeric contigs broken is %r' % total_inter_broken)
+        log('-- The total number of intrachromasomally chimeric contigs broken is %r' % total_intra_broken)
 
 
 
