@@ -29,7 +29,8 @@ num_bp_localized = 0
 for group_file in grouping_files:
     with open(group_file) as f:
         for line in f:
-            header = line.rstrip()
+            L1 = line.split('\t')
+            header = L1[0]
             num_ctg_localized += 1
             num_bp_localized += all_ctg_len[header]
             assert header in remaining_ctg
