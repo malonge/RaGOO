@@ -13,7 +13,7 @@ from ragoo_utilities.utilities import run, log, reverse_complement, read_contigs
 from ragoo_utilities.break_chimera import get_ref_parts, cluster_contig_alns, avoid_gff_intervals, update_gff, break_contig, get_intra_contigs
 
 
-def write_contig_clusters(unique_dict):
+def write_contig_clusters(unique_dict, thresh, skip_list):
     # Get a list of all chromosomes
     all_chroms = set([unique_dict[i].ref_chrom for i in unique_dict.keys()])
     current_path = os.getcwd()
@@ -28,9 +28,11 @@ def write_contig_clusters(unique_dict):
     for i in unique_dict.keys():
         this_chr = unique_dict[i].ref_chrom
         this_confidence = unique_dict[i].confidence
-        file_name = str(this_chr) + '_contigs.txt'
-        with open(file_name, 'a') as f:
-            f.write(i + '\t' + str(this_confidence) + '\n')
+        if this_confidence > thresh:
+            if not i in skip_list:
+                file_name = str(this_chr) + '_contigs.txt'
+                with open(file_name, 'a') as f:
+                    f.write(i + '\t' + str(this_confidence) + '\n')
     os.chdir(current_path)
 
 
@@ -373,6 +375,8 @@ if __name__ == "__main__":
     parser.add_argument("-s", action='store_true', default=False, help="Call structural variants")
     parser.add_argument("-a", metavar="50", type=int, default=50, help=argparse.SUPPRESS)
     parser.add_argument("-f", metavar="10000", type=int, default=10000, help=argparse.SUPPRESS)
+    parser.add_argument("-i", metavar="0.2", type=float, default=0.2, help=argparse.SUPPRESS) # Group confidence score to filter by
+    parser.add_argument("-j", metavar="<skip.txt>", type=str, default="", help=argparse.SUPPRESS)  # List of contigs to put in chr0 no matter what.
 
     # Get the command line arguments
     args = parser.parse_args()
@@ -393,6 +397,14 @@ if __name__ == "__main__":
     call_svs = args.s
     a = args.a
     f = args.f
+    group_score_thresh = args.i
+    skip_file = args.j
+
+    skip_ctg = []
+    if skip_file:
+        with open(skip_file) as f:
+            for line in f:
+                skip_ctg.append(line.rstrip())
 
     current_path = os.getcwd()
     output_path = current_path + '/ragoo_output'
@@ -522,7 +534,7 @@ if __name__ == "__main__":
         all_unique_contigs[i] = UniqueContigAlignment(alns[i])
 
     # Add to this the list of headers that did not make it
-    write_contig_clusters(all_unique_contigs)
+    write_contig_clusters(all_unique_contigs, group_score_thresh, skip_ctg)
 
     log('-- Ordering and orienting contigs')
     order_orient_contigs(all_unique_contigs, alns)
