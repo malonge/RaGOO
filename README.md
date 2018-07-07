@@ -20,9 +20,9 @@ RaGOO should install on OSX and most standard flavors of Linux. RaGOO depends on
 
 1. [intervaltree](https://pypi.python.org/pypi/intervaltree)
 2. numpy
-3. [minimap2](https://github.com/lh3/minimap2)
+3. [Minimap2](https://github.com/lh3/minimap2)
 
-The first two packages will be installed automatically when installing RaGOO. minimap2 is straightforward to install following the instructions on its website. Place the minimap2 executable in your path, or specify its location with the -m paramter (see below).
+The first two packages will be installed automatically when installing RaGOO. Minimap2 is straightforward to install following the instructions on its website. Place the minimap2 executable in your path, or specify its location with the -m paramter (see below).
 
 ### Installation
 
