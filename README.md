@@ -1,6 +1,6 @@
 # RaGOO
 
-### A tool to order and orient genome assembly contigs via minimap2 alignments to a reference genome.
+### A tool to order and orient genome assembly contigs via Minimap2 alignments to a reference genome.
 
 ## Description
 
@@ -63,7 +63,7 @@ Both the assembly and the reference must be in the current workding directory, s
 $cd /path/to/current/working/directory
 $ln -s /path/to/contigs.fasta
 $ln -s /path/to/reference.fasta
-$ ragoo.py contigs.fasta reference.fasta
+$ragoo.py contigs.fasta reference.fasta
 ```
 
 ### Output Files
