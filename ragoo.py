@@ -362,7 +362,7 @@ if __name__ == "__main__":
     parser.add_argument("reference", metavar="<reference.fasta>", type=str, help="reference fasta file")
     #parser.add_argument("-o", metavar="PATH", type=str, default="ragoo_output", help="output directory name")
     parser.add_argument("-e", metavar="<exclude.txt>", type=str, default="", help="single column text file of reference headers to ignore")
-    parser.add_argument("-gff", metavar="<annotations.gff>", type=str, default='', help="argparse.SUPPRESS")
+    parser.add_argument("-gff", metavar="<annotations.gff>", type=str, default='', help=argparse.SUPPRESS)
     parser.add_argument("-m", metavar="PATH", type=str, default="minimap2", help='path to minimap2 executable')
     parser.add_argument("-b", action='store_true', default=False, help="Break chimeric contigs")
     parser.add_argument("-p", metavar="5", type=int, default=5, help=argparse.SUPPRESS)
