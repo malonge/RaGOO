@@ -57,6 +57,14 @@ optional arguments:
 RaGOO will try to be smart and not redo intermediate analysis already done in previous executions of the pipeline. For example, if the minimap2 alignment files are already present from previous runs, RaGOO will not recreate them. However, RaGOO is not that smart, so be sure to remove any files that you want to replace. To be safe, one can just remove the entire output directory if a new analysis is desired (see "Output Files" below).
 
 ### Example Run
+Both the assembly and the reference must be in the current workding directory, so please either copy them or create a symbolic link. For example:
+
+```
+$cd /path/to/current/working/directory
+$ln -s /path/to/contigs.fasta
+$ln -s /path/to/reference.fasta
+$ ragoo.py contigs.fasta reference.fasta
+```
 
 ### Output Files
 
@@ -64,11 +72,15 @@ All of the output will be in the "ragoo_output" directory. If breaking chimeric 
 
 ```
 ragoo_output/
-├── chimera_break
-├── groupings
-├── orderings
-└── pm_alignments
+├── ragoo.fasta
+├── chimera_break/
+├── groupings/
+├── orderings/
+└── pm_alignments/
 ```
+
+#### ragoo.fasta
+The final pseudomolecules. Any unlocalized contigs are concatenated and placed in "Chr0_RaGOO".
 
 #### chimera_break
 This directory cotnains the results from chimeric contig breaking. It contains two alignment (PAF) files of contigs against the reference, one for intrachromosmal and itnerchromosmal chimeras. A new corrected fasta file is also associated with each alignment file.
