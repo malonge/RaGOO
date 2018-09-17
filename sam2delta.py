@@ -12,13 +12,11 @@ class SAMAlignment:
     def __init__(self, in_ref_header, in_query_header, in_ref_start, in_cigar, in_flag, in_seq_len):
         self.seq_len = in_seq_len
         self.flag = int(in_flag)
-        self.is_rc = None
+        self.is_rc = False
 
         # Check if the query was reverse complemented
         if self.flag & 16:
             self.is_rc = True
-        else:
-            self.is_rc = False
 
         self.cigar = in_cigar
         self.parsed_cigar = []
