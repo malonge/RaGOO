@@ -4,6 +4,10 @@ from collections import defaultdict
 
 """
 This utility converts a SAM file to a nucmer delta file.
+
+Be advised, the last 3 numbers of the 7 field alignment lines are fudged.
+For each alignment, the start and end positions for the reference and query are accurate, but the following 3 fields
+are fudged with a value of 0 (though, for DNA alignments, the last number would be 0 anyway). 
 """
 
 
