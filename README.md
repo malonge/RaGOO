@@ -83,7 +83,7 @@ ragoo_output/
 The final pseudomolecules. Any unlocalized contigs are concatenated and placed in "Chr0_RaGOO".
 
 #### chimera_break
-This directory cotnains the results from chimeric contig breaking. It contains two alignment (PAF) files of contigs against the reference, one for intrachromosmal and itnerchromosmal chimeras. A new corrected fasta file is also associated with each alignment file.
+This directory cotnains the results from chimeric contig breaking. It contains two alignment (PAF) files of contigs against the reference, one for intrachromosmal and interchromosmal chimeras. A new corrected fasta file is also associated with each alignment file.
 
 The most notable file here is the **[prefix].intra.chimera.broken.fa**, as this is the final corrected assembly used for downstream scaffolding. All of the downstream information such as confidence scores refers to this assembly, not the orignal assembly.
 
