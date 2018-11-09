@@ -88,7 +88,7 @@ This directory cotnains the results from chimeric contig breaking. It contains t
 The most notable file here is the **[prefix].intra.chimera.broken.fa**, as this is the final corrected assembly used for downstream scaffolding. All of the downstream information such as confidence scores refers to this assembly, not the orignal assembly.
 
 #### groupings
-There is one file per chromosome listing the contigs assigned to that chromosome, and their grouping confidenc score. Please not that these contigs are not ordered. Also note that if chimeras were corrected, the headears in these files refer to the broekn assembly in "chimera_break", and not the original assembly.
+There is one file per chromosome listing the contigs assigned to that chromosome, and their grouping confidence score. Please not that these contigs are not ordered. Also note that if chimeras were corrected, the headears in these files refer to the broekn assembly in "chimera_break", and not the original assembly.
 
 #### orderings
 There is one file per chromosome showing the ordering, orientation (second column), location confidence scores (third column), and orientation confidence scores (fourth column) for each chromosome.
