@@ -5,15 +5,14 @@ from collections import defaultdict
 """
 This utility converts a SAM file to a nucmer delta file.
 
-Be advised, the last 3 numbers of the 7 field alignment lines are fudged.
-For each alignment, the start and end positions for the reference and query are accurate, but the following 3 fields
-are fudged with a value of 0 (though, for DNA alignments, the last number would be 0 anyway). 
+SAM files must contain an NM tag, which is default in minimap2 alignments.  
 """
 
 
 class SAMAlignment:
 
-    def __init__(self, in_ref_header, in_query_header, in_ref_start, in_cigar, in_flag, in_seq_len):
+    def __init__(self, in_ref_header, in_query_header, in_ref_start, in_cigar, in_flag, in_seq_len, in_num_mismatches):
+        self.num_mismatches = in_num_mismatches
         self.seq_len = in_seq_len
         self.flag = int(in_flag)
         self.is_rc = False
@@ -145,8 +144,8 @@ def write_delta(in_alns, in_file_name):
                     i.ref_end,
                     i.query_start,
                     i.query_end,
-                    0,
-                    0,
+                    i.num_mismatches,
+                    i.num_mismatches,
                     0
                 ))
                 # Continue with the cigar string
@@ -214,14 +213,26 @@ with open(sam_file) as f:
         cigar = fields[5]
         flag = fields[1]
         seq_len = len(fields[9])
+
         if not cigar == '*':
+            # Get the NM flag
+            nm = None
+            for i in fields:
+                if i.startswith('NM:i'):
+                    nm = int(i[5:])
+                    continue
+
+            if nm is None:
+                raise ValueError('SAM file must include NM tag.')
+
             x = SAMAlignment(
                 ref_header,
                 query_header,
                 ref_start,
                 cigar,
                 flag,
-                seq_len
+                seq_len,
+                nm
             )
             alns[(ref_header, query_header)].append(x)
 
