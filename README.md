@@ -6,8 +6,8 @@
 
 RaGOO is a tool for coalescing genome assembly contigs into pseudochromosomes via minimap2 alignments to a closely related reference genome. The focus of this tool is on practicality and therefore has the following features:
 
-1. Good performance. On a MacBook Pro using Arabidopsis data, pseudochromosome construction takes less than a minute and the whole pipeline with SV calling takes ~ 2 minutes.
-2. In-tact ordering and orienting of contigs. 
+1. High performance. On a MacBook Pro using Arabidopsis data, pseudochromosome construction takes less than a minute and the whole pipeline with SV calling takes ~2 minutes.
+2. Intact ordering and orienting of contigs. 
 3. Chimeric contig correction.
 4. Structural variant calling with [Assemblytics](http://assemblytics.com/).
 5. Confidence scores associated with the grouping, localization, and orientation for each contig.
@@ -29,7 +29,7 @@ The first two packages will be installed automatically when installing RaGOO. Mi
 Currently, the only way to install RaGOO is from source. Set up a virtualenv if desired, just be sure to make a python3 environment. Then, enter the following command to install RaGOO and its dependencies:
 
 ```
-$python setup.py install
+$ python setup.py install
 ```
 
 ## Usage
@@ -60,10 +60,10 @@ RaGOO will try to be smart and not redo intermediate analysis already done in pr
 Both the assembly and the reference must be in the current workding directory, so please either copy them or create a symbolic link. For example:
 
 ```
-$cd /path/to/current/working/directory
-$ln -s /path/to/contigs.fasta
-$ln -s /path/to/reference.fasta
-$ragoo.py contigs.fasta reference.fasta
+$ cd /path/to/current/working/directory
+$ ln -s /path/to/contigs.fasta
+$ ln -s /path/to/reference.fasta
+$ ragoo.py contigs.fasta reference.fasta
 ```
 
 ### Output Files
