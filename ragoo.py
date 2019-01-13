@@ -303,7 +303,7 @@ def align_pms(m_path, num_threads, in_reference_file):
         os.makedirs(output_path)
     os.chdir('pm_alignments')
 
-    cmd = '{} -ax asm5 -t{} ../../{} {} ' \
+    cmd = '{} -ax asm5 --cs -t{} ../../{} {} ' \
           '> pm_against_ref.sam 2> pm_contigs_against_ref.sam.log'.format(m_path, num_threads,
                                                                                         in_reference_file, '../ragoo.fasta')
     if not os.path.isfile('pm_against_ref.sam'):
