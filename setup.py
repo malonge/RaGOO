@@ -16,4 +16,5 @@ setup(
               'numpy',
           ],
     scripts=scripts,
+    zip_safe=True
 )
