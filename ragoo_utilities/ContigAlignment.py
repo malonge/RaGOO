@@ -259,7 +259,9 @@ class UniqueContigAlignment:
                 max_end = max(max_end, j[1])
 
         assert ranges
-        max_chrom = max(ranges.items(), key=operator.itemgetter(1))[0]
+
+        # I convert to a list and sort the ranges.items() in order to have ties broken in a deterministic way.
+        max_chrom = max(sorted(list(ranges.items())), key=operator.itemgetter(1))[0]
         self.ref_chrom = max_chrom
 
         # Now get the confidence of this chromosome assignment
