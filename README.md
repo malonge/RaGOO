@@ -4,6 +4,8 @@
 
 ## Description
 
+Alonge M, Soyk S, Ramakrishnan S, Wang X, Goodwin S, Sedlazeck FJ, Lippman ZB, Schatz MC: [Fast and accurate reference-guided scaffolding of draft genomes](https://www.biorxiv.org/content/early/2019/01/13/519637). *bioRxiv* 2019.
+
 RaGOO is a tool for coalescing genome assembly contigs into pseudochromosomes via minimap2 alignments to a closely related reference genome. The focus of this tool is on practicality and therefore has the following features:
 
 1. High performance. On a MacBook Pro using Arabidopsis data, pseudochromosome construction takes less than a minute and the whole pipeline with SV calling takes ~2 minutes.
