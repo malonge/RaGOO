@@ -6,7 +6,7 @@ from ragoo_utilities.SeqReader import SeqReader
 
 """ A collection of various helper functions"""
 
-complements = str.maketrans("ACGTNURYSWKMBVDH", "TGCANAYRSWMKVBHD")
+complements = str.maketrans("ACGTNURYSWKMBVDHacgtnuryswkmbvdh", "TGCANAYRSWMKVBHDtgcanayrswmkvbhd")
 
 
 def reverse_complement(seq):
