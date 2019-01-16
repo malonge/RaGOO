@@ -5,7 +5,7 @@ scripts = glob.glob("*.p*")
 
 setup(
     name='RaGOO',
-    version='1.1',
+    version='v1.01',
     description='A tool to order and orient genome assembly contigs via minimap2 alignments to a reference genome.',
     author='Michael Alonge',
     author_email='malonge11@gmail.com',
