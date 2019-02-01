@@ -252,10 +252,15 @@ def create_pseudomolecules(in_contigs_file, in_unique_contigs, gap_size):
     all_pms['Chr0'] += '\n'
 
     # Write out the list of chr0 headers
-    f_chr0 = open('groupings/Chr0_contigs.txt', 'w')
+    f_chr0_g = open('groupings/Chr0_contigs.txt', 'w')
+    f_chr0_o = open('orderings/Chr0_orderings.txt', 'w')
     for i in chr0_headers:
-        f_chr0.write(i[1:] + '\t' + "0" + '\n')
-    f_chr0.close()
+        f_chr0_g.write(i[1:] + "\t" + "0" + '\n')
+        f_chr0_o.write(i[1:] + '\t' + "+" + '\t' + "0" + '\t' + "0" + '\n')
+    f_chr0_g.close()
+    f_chr0_o.close()
+
+
 
     # Write the final sequences out to a file
     with open('ragoo.fasta', 'w') as f:

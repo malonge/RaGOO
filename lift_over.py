@@ -6,7 +6,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Lift-over gff coordinates to from contigs to RaGOO pseudomolecules')
     parser.add_argument("gff", metavar="<genes.gff>", type=str, help="Gff file to be lifted-over")
-    parser.add_argument("contigs_fai", metavar="<contigs.fasta.fai>", type=str, help="fasta index for initial contigs")
+    parser.add_argument("-g", metavar="100", type=int, default=100, help="Gap size for padding in pseudomolecules (must match what was used for 'ragoo.py'.")
 
 
     # Get the command line arguments
