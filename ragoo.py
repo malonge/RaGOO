@@ -243,11 +243,19 @@ def create_pseudomolecules(in_contigs_file, in_unique_contigs, gap_size):
         all_pms[this_chrom] += '\n'
 
     # Get unincorporated sequences and place them in Chr0
+    chr0_headers = []
     all_pms['Chr0'] = ''
     for header in remaining_contig_headers:
+        chr0_headers.append(header)
         all_pms['Chr0'] += all_seqs[header]
         all_pms['Chr0'] += ''.join('N' for i in range(gap_size))
     all_pms['Chr0'] += '\n'
+
+    # Write out the list of chr0 headers
+    f_chr0 = open('groupings/Chr0_contigs.txt', 'w')
+    for i in chr0_headers:
+        f_chr0.write(i[1:] + '\t' + "0" + '\n')
+    f_chr0.close()
 
     # Write the final sequences out to a file
     with open('ragoo.fasta', 'w') as f:
@@ -362,7 +370,7 @@ if __name__ == "__main__":
     parser.add_argument("reference", metavar="<reference.fasta>", type=str, help="reference fasta file")
     #parser.add_argument("-o", metavar="PATH", type=str, default="ragoo_output", help="output directory name")
     parser.add_argument("-e", metavar="<exclude.txt>", type=str, default="", help="single column text file of reference headers to ignore")
-    parser.add_argument("-gff", metavar="<annotations.gff>", type=str, default='', help=argparse.SUPPRESS)
+    parser.add_argument("-gff", metavar="<annotations.gff>", type=str, default='', help="lift-over gff features to chimera-broken contigs")
     parser.add_argument("-m", metavar="PATH", type=str, default="minimap2", help='path to minimap2 executable')
     parser.add_argument("-b", action='store_true', default=False, help="Break chimeric contigs")
     parser.add_argument("-p", metavar="5", type=int, default=5, help=argparse.SUPPRESS)
