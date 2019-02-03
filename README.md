@@ -88,15 +88,13 @@ ragoo_output/
 The final pseudomolecules. Any unlocalized contigs are concatenated and placed in "Chr0_RaGOO".
 
 #### chimera_break
-This directory cotnains the results from chimeric contig breaking. It contains two alignment (PAF) files of contigs against the reference, one for intrachromosmal and interchromosmal chimeras. A new corrected fasta file is also associated with each alignment file.
-
-The most notable file here is the **[prefix].intra.chimera.broken.fa**, as this is the final corrected assembly used for downstream scaffolding. All of the downstream information such as confidence scores refers to this assembly, not the orignal assembly.
+This directory cotnains the results from chimeric contig breaking. The most notable file here is the **[prefix].intra.chimera.broken.fa**, as this is the final corrected assembly used for downstream scaffolding. All of the downstream information, such as confidence scores, refers to this assembly, not the orignal assembly.
 
 #### groupings
-There is one file per chromosome listing the contigs assigned to that chromosome, and their grouping confidence score. Please not that these contigs are not ordered. Also note that if chimeras were corrected, the headers in these files refer to the broken assembly in "chimera_break", and not the original assembly.
+There is one file per chromosome listing the contigs assigned to that chromosome and their grouping confidence score. Please note that these contigs are not ordered. Also note that if chimeras were corrected, the headers in these files refer to the broken assembly in "chimera_break", and not the original assembly.
 
 #### orderings
-There is one file per chromosome showing the ordering, orientation (second column), location confidence scores (third column), and orientation confidence scores (fourth column) for each chromosome.
+There is one file per chromosome showing the ordering, orientation (second column), location confidence scores (third column), and orientation confidence scores (fourth column).
 
 #### pm_alignments
-This directory contains all of the structural variant calling results. The final structural variants can be found in **assemblytics_out.Assemblytics_structural_variants.bed**. This bed file can be converted to VCF using [SURVIVOR](https://github.com/fritzsedlazeck/SURVIVOR), though the last two columns (overlap with gaps) must be removed first. The alignment used to generate these variant calls are also present in this directory in SAM and delta format, and can be used as input for external tools (**pm_contigs_against_ref.sam** and **pm_contigs_against_ref.sam.delta**). 
+This directory contains all of the structural variant calling results. The final structural variants can be found in **assemblytics_out.Assemblytics_structural_variants.bed**. This bed file can be converted to VCF using [SURVIVOR](https://github.com/fritzsedlazeck/SURVIVOR), though the last two columns (overlap with gaps) must be removed first. The alignment used to generate these variant calls are also present in this directory in SAM and delta format (**pm_contigs_against_ref.sam** and **pm_contigs_against_ref.sam.delta**), and can be used as input for external tools. 
