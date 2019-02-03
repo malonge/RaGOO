@@ -88,7 +88,7 @@ ragoo_output/
 The final pseudomolecules. Any unlocalized contigs are concatenated and placed in "Chr0_RaGOO".
 
 #### chimera_break
-This directory cotnains the results from chimeric contig breaking. The most notable file here is the **[prefix].intra.chimera.broken.fa**, as this is the final corrected assembly used for downstream scaffolding. All of the downstream information, such as confidence scores, refers to this assembly, not the orignal assembly.
+This directory contains the results from chimeric contig breaking. The most notable file here is the **[prefix].intra.chimera.broken.fa**, as this is the final corrected assembly used for downstream scaffolding. All of the downstream information, such as confidence scores, refers to this assembly, not the orignal assembly.
 
 #### groupings
 There is one file per chromosome listing the contigs assigned to that chromosome and their grouping confidence score. Please note that these contigs are not ordered. Also note that if chimeras were corrected, the headers in these files refer to the broken assembly in "chimera_break", and not the original assembly.
