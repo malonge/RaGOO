@@ -2,6 +2,7 @@
 
 ### A tool to order and orient genome assembly contigs via Minimap2 alignments to a reference genome.
 
+
 **01/16/19 - Early users please update to the latest version (v1.01) as it has some bug fixes**
 
 ## Description
@@ -10,10 +11,10 @@ Alonge M, Soyk S, Ramakrishnan S, Wang X, Goodwin S, Sedlazeck FJ, Lippman ZB, S
 
 RaGOO is a tool for coalescing genome assembly contigs into pseudochromosomes via minimap2 alignments to a closely related reference genome. The focus of this tool is on practicality and therefore has the following features:
 
-1. High performance. On a MacBook Pro using Arabidopsis data, pseudochromosome construction takes less than a minute and the whole pipeline with SV calling takes ~2 minutes.
+1. Good performance. On a MacBook Pro using Arabidopsis data, pseudochromosome construction takes less than a minute and the whole pipeline with SV calling takes ~2 minutes.
 2. Intact ordering and orienting of contigs. 
 3. Chimeric contig correction.
-4. Structural variant calling with [Assemblytics](http://assemblytics.com/).
+4. Structural variant calling with and integrated version of [Assemblytics](http://assemblytics.com/).
 5. Confidence scores associated with the grouping, localization, and orientation for each contig.
 
 ## Installation
@@ -30,7 +31,7 @@ The first two packages will be installed automatically when installing RaGOO. Mi
 
 ### Installation
 
-Currently, the only way to install RaGOO is from source. Set up a virtualenv if desired, just be sure to make a python3 environment. Then, enter the following command to install RaGOO and its dependencies:
+Currently, the only way to install RaGOO is from source. Set up a virtualenv if desired, just be sure to make a python3 environment. Then, enter the following command to install RaGOO:
 
 ```
 $ python setup.py install
@@ -58,7 +59,7 @@ optional arguments:
   -s                 Call structural variants
 ``` 
 
-RaGOO will try to be smart and not redo intermediate analysis already done in previous executions of the pipeline. For example, if the minimap2 alignment files are already present from previous runs, RaGOO will not recreate them. However, RaGOO is not that smart, so be sure to remove any files that you want to replace. To be safe, one can just remove the entire output directory if a new analysis is desired (see "Output Files" below).
+RaGOO will try to be smart and not redo intermediate analysis already done in previous executions of the pipeline. For example, if the Minimap2 alignment files are already present from previous runs, RaGOO will not recreate them. However, RaGOO is not that smart, so be sure to remove any files that you want to replace. To be safe, one can just remove the entire output directory if a new analysis is desired (see "Output Files" below).
 
 ### Example Run
 Both the assembly and the reference must be in the current workding directory, so please either copy them or create a symbolic link. For example:
@@ -87,15 +88,13 @@ ragoo_output/
 The final pseudomolecules. Any unlocalized contigs are concatenated and placed in "Chr0_RaGOO".
 
 #### chimera_break
-This directory cotnains the results from chimeric contig breaking. It contains two alignment (PAF) files of contigs against the reference, one for intrachromosmal and interchromosmal chimeras. A new corrected fasta file is also associated with each alignment file.
-
-The most notable file here is the **[prefix].intra.chimera.broken.fa**, as this is the final corrected assembly used for downstream scaffolding. All of the downstream information such as confidence scores refers to this assembly, not the orignal assembly.
+This directory contains the results from chimeric contig breaking. The most notable file here is the **[prefix].intra.chimera.broken.fa**, as this is the final corrected assembly used for downstream scaffolding. All of the downstream information, such as confidence scores, refers to this assembly, not the orignal assembly.
 
 #### groupings
-There is one file per chromosome listing the contigs assigned to that chromosome, and their grouping confidence score. Please not that these contigs are not ordered. Also note that if chimeras were corrected, the headers in these files refer to the broken assembly in "chimera_break", and not the original assembly.
+There is one file per chromosome listing the contigs assigned to that chromosome and their grouping confidence score. Please note that these contigs are not ordered. Also note that if chimeras were corrected, the headers in these files refer to the broken assembly in "chimera_break", and not the original assembly.
 
 #### orderings
-There is one file per chromosome showing the ordering, orientation (second column), location confidence scores (third column), and orientation confidence scores (fourth column) for each chromosome.
+There is one file per chromosome showing the ordering, orientation (second column), location confidence scores (third column), and orientation confidence scores (fourth column).
 
 #### pm_alignments
-This directory contains all of the structural variant calling results. The final structural variants can be found in **assemblytics_out.Assemblytics_structural_variants.bed**. This bed file can be converted to VCF using [SURVIVOR](https://github.com/fritzsedlazeck/SURVIVOR), though the last two columns (overlap with gaps) must be removed first. The alignment used to generate these variant calls are also present in this directory in SAM and delta format, and can be used as input for external tools (**pm_contigs_against_ref.sam** and **pm_contigs_against_ref.sam.delta**). 
+This directory contains all of the structural variant calling results. The final structural variants can be found in **assemblytics_out.Assemblytics_structural_variants.bed**. This bed file can be converted to VCF using [SURVIVOR](https://github.com/fritzsedlazeck/SURVIVOR), though the last two columns (overlap with gaps) must be removed first. The alignment used to generate these variant calls are also present in this directory in SAM and delta format (**pm_contigs_against_ref.sam** and **pm_contigs_against_ref.sam.delta**), and can be used as input for external tools. 
