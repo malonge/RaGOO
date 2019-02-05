@@ -388,8 +388,8 @@ if __name__ == "__main__":
     parser.add_argument("-s", action='store_true', default=False, help="Call structural variants")
     parser.add_argument("-a", metavar="50", type=int, default=50, help=argparse.SUPPRESS)
     parser.add_argument("-f", metavar="10000", type=int, default=10000, help=argparse.SUPPRESS)
-    parser.add_argument("-i", metavar="0.2", type=float, default=0.2, help=argparse.SUPPRESS) # Group confidence score to filter by
-    parser.add_argument("-j", metavar="<skip.txt>", type=str, default="", help=argparse.SUPPRESS)  # List of contigs to put in chr0 no matter what.
+    parser.add_argument("-i", metavar="0.2", type=float, default=0.2, help="Minimum grouping confidence score needed to be localized.")
+    parser.add_argument("-j", metavar="<skip.txt>", type=str, default="", help="List of contigs to automatically put in chr0.")
 
     # Get the command line arguments
     args = parser.parse_args()
