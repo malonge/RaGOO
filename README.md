@@ -15,7 +15,7 @@ RaGOO is a tool for coalescing genome assembly contigs into pseudochromosomes vi
 2. Intact ordering and orienting of contigs. 
 3. [Chimeric contig correction](https://github.com/malonge/RaGOO/wiki/Breaking-Chimeric-Contigs)
 4. [GFF lift-over](https://github.com/malonge/RaGOO/wiki/GFF-File-Lift-Over)
-5. [Structural variant calling with and integrated version of [Assemblytics](http://assemblytics.com/)](https://github.com/malonge/RaGOO/wiki/Calling-Structural-Variants)
+5. [Structural variant calling with and integrated version of Assemblytics](https://github.com/malonge/RaGOO/wiki/Calling-Structural-Variants)
 6. Confidence scores associated with the grouping, localization, and orientation for each contig.
 
 ## Installation
