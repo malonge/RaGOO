@@ -5,6 +5,8 @@
 
 **01/16/19 - Early users please update to the latest version (v1.01) as it has some bug fixes**
 
+**02/19/19 - Optimized pseudmolecule construction time in v1.02. I am getting a 20 fold speedup during the "Creating pseudomolecyles" phase.**
+
 ## Description
 
 Alonge M, Soyk S, Ramakrishnan S, Wang X, Goodwin S, Sedlazeck FJ, Lippman ZB, Schatz MC: [Fast and accurate reference-guided scaffolding of draft genomes](https://www.biorxiv.org/content/early/2019/01/13/519637). *bioRxiv* 2019.
