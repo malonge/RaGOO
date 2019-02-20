@@ -246,7 +246,6 @@ def create_pseudomolecules(in_contigs_file, in_unique_contigs, gap_size):
     # Get unincorporated sequences and place them in Chr0
     chr0_headers = []
     chr0_seq_list = []
-    all_pms['Chr0'] = ''
     for header in remaining_contig_headers:
         chr0_headers.append(header)
         chr0_seq_list.append(all_seqs[header])
