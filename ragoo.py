@@ -380,6 +380,8 @@ if __name__ == "__main__":
     parser.add_argument("-gff", metavar="<annotations.gff>", type=str, default='', help="lift-over gff features to chimera-broken contigs")
     parser.add_argument("-m", metavar="PATH", type=str, default="minimap2", help='path to minimap2 executable')
     parser.add_argument("-b", action='store_true', default=False, help="Break chimeric contigs")
+    parser.add_argument("-R", metavar="<reads.fasta>", type=str, default="",
+                        help="Turns on misassembly correction. Align provided raw reads back to the contigs to aid misassembly correction. Turns off '-b'.")
     parser.add_argument("-p", metavar="5", type=int, default=5, help=argparse.SUPPRESS)
     parser.add_argument("-l", metavar="10000", type=int, default=10000, help=argparse.SUPPRESS)
     parser.add_argument("-r", metavar="100000", type=int, default=100000, help=argparse.SUPPRESS)
