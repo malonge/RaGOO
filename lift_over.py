@@ -1,4 +1,4 @@
-
+#!/usr/bin/env python
 def get_contig_lengths(in_fai):
     """ Get contig lengths from a fasta index. """
     lens = dict()
