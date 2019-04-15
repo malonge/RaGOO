@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from collections import defaultdict
 import copy
 
@@ -5,6 +6,7 @@ from intervaltree import IntervalTree
 
 from ragoo_utilities.PAFReader import PAFReader
 from ragoo_utilities.SeqReader import SeqReader
+from ragoo_utilities.ReadCoverage import ReadCoverage
 from ragoo_utilities.ContigAlignment import ContigAlignment
 from ragoo_utilities.ContigAlignment import UniqueContigAlignment
 from ragoo_utilities.ContigAlignment import LongestContigAlignment
@@ -36,7 +38,7 @@ def write_contig_clusters(unique_dict, thresh, skip_list):
     os.chdir(current_path)
 
 
-def clean_alignments(in_alns, l=10000, in_exclude_file='', uniq_anchor_filter=False):
+def clean_alignments(in_alns, l=10000, in_exclude_file='', uniq_anchor_filter=False, merge=False):
     # Exclude alignments to undesired reference headers and filter alignment lengths.
     exclude_list = []
     if in_exclude_file:
@@ -50,6 +52,11 @@ def clean_alignments(in_alns, l=10000, in_exclude_file='', uniq_anchor_filter=Fa
         in_alns[header].filter_lengths(l)
         if uniq_anchor_filter:
             in_alns[header].unique_anchor_filter()
+
+        if merge:
+            in_alns[header].merge_alns()
+
+        # Check if our filtering has removed all alignments for a contig
         if len(in_alns[header].ref_headers) == 0:
             empty_headers.append(header)
 
@@ -368,6 +375,28 @@ def get_SVs(sv_min, sv_max, in_ref_file):
     os.chdir(current_path)
 
 
+def align_ctgs(m_path, num_threads, in_ctg_file, reads, tech='ont'):
+    current_path = os.getcwd()
+    output_path = current_path + '/ctg_alignments'
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+    os.chdir('ctg_alignments')
+
+    if tech == 'ont':
+        cmd = '{} -x map-ont -t{} ../../{} ../../{} ' \
+              '> reads_against_ctg.paf 2> reads_against_ctg.paf.log'.format(m_path, num_threads, in_ctg_file, reads)
+    elif tech == 'pb':
+        cmd = '{} -x map-pb -t{} ../../{} ../../{} ' \
+              '> reads_against_ctg.paf 2> reads_against_ctg.paf.log'.format(m_path, num_threads, in_ctg_file, reads)
+    else:
+        raise ValueError("Only 'ont' or 'pb' are accepted for read technology.")
+
+    if not os.path.isfile('reads_against_ctg.paf'):
+        run(cmd)
+
+    os.chdir(current_path)
+
+
 if __name__ == "__main__":
     import os
     import argparse
@@ -382,6 +411,8 @@ if __name__ == "__main__":
     parser.add_argument("-b", action='store_true', default=False, help="Break chimeric contigs")
     parser.add_argument("-R", metavar="<reads.fasta>", type=str, default="",
                         help="Turns on misassembly correction. Align provided raw reads back to the contigs to aid misassembly correction. Turns off '-b'.")
+    parser.add_argument("-T", metavar="ont", type=str, default="",
+                        help="Sequencing technology of reads provided with '-R'. 'ont' and 'pb' accepted for Oxford Nanopore and PacBio respectively.")
     parser.add_argument("-p", metavar="5", type=int, default=5, help=argparse.SUPPRESS)
     parser.add_argument("-l", metavar="10000", type=int, default=10000, help=argparse.SUPPRESS)
     parser.add_argument("-r", metavar="100000", type=int, default=100000, help=argparse.SUPPRESS)
@@ -416,6 +447,15 @@ if __name__ == "__main__":
     f = args.f
     group_score_thresh = args.i
     skip_file = args.j
+    corr_reads = args.R
+    corr_reads_tech = args.T
+
+    if corr_reads:
+        break_chimeras = False
+
+    # Make sure that if -R, -T has been specified
+    if corr_reads and not corr_reads_tech:
+        raise ValueError("'-T' must be provided when using -R.")
 
     skip_ctg = []
     if skip_file:
@@ -542,6 +582,34 @@ if __name__ == "__main__":
         log('-- The total number of interchromasomally chimeric contigs broken is %r' % total_inter_broken)
         log('-- The total number of intrachromasomally chimeric contigs broken is %r' % total_intra_broken)
 
+
+    # Check if misassembly correction is turned on. This is mutually exclusive with chimeric contig correction
+    if corr_reads:
+        # Align the raw reads to the assembly.
+        log('-- Aligning raw reads to contigs')
+        align_ctgs(minimap_path, t, contigs_file, corr_reads, corr_reads_tech)
+        cov_map = ReadCoverage('ctg_alignments/reads_against_ctg.paf')
+
+        test_header = list(alns.keys())[0]
+        print("\n\n Before unique anchor \n\n\n\n")
+        alns = clean_alignments(alns, l=10000, in_exclude_file=exclude_file, uniq_anchor_filter=True) # Remove after testing
+        print(alns[test_header])
+        print("\n\n\n\n\n\nbefore merge")
+        print(alns[test_header])
+        alns = clean_alignments(alns, l=10000, in_exclude_file=exclude_file, uniq_anchor_filter=True, merge=True)
+        print("\n\n\n\n after merge")
+        print(alns[test_header])
+
+        # Get the inital candidate break points.
+        candidate_breaks = dict()
+        for i in alns:
+            candidates = alns[i].get_break_candidates()
+            if candidates:
+                candidate_breaks[i] = candidates
+        print(candidate_breaks[test_header])
+
+        # Pare down the list of candidates by checking for high or low coverage
+        # If gff, exclude breakpoints inside of gff intervals.
 
 
     # Assign each contig to a corresponding reference chromosome.
