@@ -5,7 +5,7 @@
 
 **01/16/19 - Early users please update to the latest version (v1.01) as it has some bug fixes**
 
-**02/19/19 - Optimized pseudmolecule construction time in v1.02. I am getting a 20 fold speedup during the "Creating pseudomolecyles" phase.**
+**02/19/19 - Optimized pseudmolecule construction time in v1.02. I am getting a 20 fold speedup during the "Creating pseudomolecules" phase.**
 
 ## Description
 
@@ -43,23 +43,29 @@ $ python setup.py install
 ## Usage
 
 ```
-usage: ragoo.py [-h] [-e <exclude.txt>] [-m PATH] [-b] [-t 3] [-g 100] [-s]
+usage: ragoo.py [-h] [-e <exclude.txt>] [-gff <annotations.gff>] [-m PATH]
+                [-b] [-t 3] [-g 100] [-s] [-i 0.2] [-j <skip.txt>]
                 <contigs.fasta> <reference.fasta>
 
 order and orient contigs according to minimap2 alignments to a reference
 
 positional arguments:
-  <contigs.fasta>    fasta file with contigs to be ordered and oriented
-  <reference.fasta>  reference fasta file
+  <contigs.fasta>       fasta file with contigs to be ordered and oriented
+  <reference.fasta>     reference fasta file
 
 optional arguments:
-  -h, --help         show this help message and exit
-  -e <exclude.txt>   single column text file of reference headers to ignore
-  -m PATH            path to minimap2 executable
-  -b                 Break chimeric contigs
-  -t 3               Number of threads when running minimap.
-  -g 100             Gap size for padding in pseudomolecules.
-  -s                 Call structural variants
+  -h, --help            show this help message and exit
+  -e <exclude.txt>      single column text file of reference headers to ignore
+  -gff <annotations.gff>
+                        lift-over gff features to chimera-broken contigs
+  -m PATH               path to minimap2 executable
+  -b                    Break chimeric contigs
+  -t 3                  Number of threads when running minimap.
+  -g 100                Gap size for padding in pseudomolecules.
+  -s                    Call structural variants
+  -i 0.2                Minimum grouping confidence score needed to be
+                        localized.
+  -j <skip.txt>         List of contigs to automatically put in chr0.
 ``` 
 
 RaGOO will try to be smart and not redo intermediate analysis already done in previous executions of the pipeline. For example, if the Minimap2 alignment files are already present from previous runs, RaGOO will not recreate them. However, RaGOO is not that smart, so be sure to remove any files that you want to replace. To be safe, one can just remove the entire output directory if a new analysis is desired (see "Output Files" below).
