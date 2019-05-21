@@ -7,16 +7,11 @@ from ragoo_utilities.utilities import summarize_planesweep, binary_search
 class ContigAlignment:
     """
     This object will represent a contig's alignment to a reference chromosome.
-    Specifically, this class will organize aligments in a one-to-many fashion, where
+    Specifically, this class will organize alignments in a one-to-many fashion, where
     we will only have one object per contig, and each object will store all of the alignments
     of that contig.
 
-    The ultimate goal is to uniquely assign every contig to a chromosome. In the case where the
-    contig only aligns to one chromosome, the answer is already solved.
 
-    If one contig maps to many chromosomes, we will have to find a way to find the 'best'
-    chromosome for that contig given the nucmer alignment metrics. This object should store
-    all such alignment metrics which might be helpful for this.
     """
 
     def __init__(self, in_contig):
@@ -50,7 +45,7 @@ class ContigAlignment:
 
     def __str__(self):
         """ Return the alignments in sorted PAF format. """
-        self.sort_by_ref()
+        self.sort_by_query()
         all_alns = []
         for i in range(len(self.ref_headers)):
             all_alns.append(
@@ -149,8 +144,16 @@ class ContigAlignment:
     def sort_by_ref(self):
         ref_pos = []
         for i in range(len(self.ref_headers)):
-            ref_pos.append((self.ref_starts[i], self.ref_ends[i], i))
-        hits = [i[2] for i in sorted(ref_pos)]
+            ref_pos.append((self.ref_headers[i], self.ref_starts[i], self.ref_ends[i], i))
+        hits = [i[3] for i in sorted(ref_pos)]
+
+        self.rearrange_alns(hits)
+
+    def sort_by_query(self):
+        q_pos = []
+        for i in range(len(self.ref_headers)):
+            q_pos.append((self.query_starts[i], self.query_ends[i], i))
+        hits = [i[2] for i in sorted(q_pos)]
 
         self.rearrange_alns(hits)
 
@@ -215,8 +218,11 @@ class ContigAlignment:
                 self.ref_starts[j] - self.ref_ends[i] <= merge_dist
             ]):
                 # Merge the alignments in place of the first alignment
+                self.ref_starts[i] = min(self.ref_starts[i], self.ref_starts[j])
                 self.ref_ends[i] = max(self.ref_ends[i], self.ref_ends[j])
+                self.query_starts[i] = min(self.query_starts[i], self.query_starts[j])
                 self.query_ends[i] = max(self.query_ends[i], self.query_ends[j])
+
                 self.num_matches[i] += self.num_matches[j]
                 self.aln_lens[i] = self.ref_ends[i] - self.ref_starts[i]
                 self.mapqs[i] = (self.mapqs[i] + self.mapqs[j])//2
@@ -237,16 +243,30 @@ class ContigAlignment:
                 i += 1
                 j += 1
 
+        # remove contained alignments. contained w.r.t the contig
+        cont_inds = []
+        for i in range(len(self.ref_headers)):
+            for j in range(len(self.ref_headers)):
+                # Check if j is contained by i
+                if i == j:
+                    continue
+                if self.query_starts[i] <= self.query_starts[j] and self.query_ends[i] >= self.query_ends[j]:
+                    cont_inds.append(j)
+
+        hits = [i for i in range(len(self.ref_headers)) if i not in cont_inds]
+        self.rearrange_alns(hits)
+
         self._is_merged = True
 
     def get_break_candidates(self):
         if not self._is_merged:
             raise ValueError("Alignments must first be merged.")
 
+        self.sort_by_query()
         all_candidates = []
         for i in range(1, len(self.ref_headers)):
-            all_candidates.append(self.query_ends[i-1])
-            all_candidates.append(self.query_starts[i])
+            all_candidates.append(min(self.query_ends[i-1], self.query_starts[i]))
+            all_candidates.append(max(self.query_ends[i-1], self.query_starts[i]))
 
         return all_candidates
 
