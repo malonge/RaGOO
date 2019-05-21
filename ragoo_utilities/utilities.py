@@ -27,7 +27,7 @@ def run(cmnd):
 
 def log(message):
     """ Log messages to standard output. """
-    print (time.ctime() + ' --- ' + message, flush=True)
+    print(time.ctime() + ' --- ' + message, flush=True)
 
 
 def read_contigs(in_file):

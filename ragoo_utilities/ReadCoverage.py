@@ -180,7 +180,7 @@ class ReadCoverage:
 
         if min_cov is None or max_cov is None:
             # Automatically calculate min and max coverage
-            min_cov = self.glob_mean - (self.glob_std*3)
+            min_cov = max(self.glob_mean - (self.glob_std*3), 0)
             max_cov = self.glob_mean + (self.glob_std*3)
 
         supported_breaks = []

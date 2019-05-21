@@ -16,6 +16,41 @@ from ragoo_utilities.utilities import run, log, reverse_complement, read_contigs
 from ragoo_utilities.break_chimera import get_ref_parts, cluster_contig_alns, avoid_gff_intervals, update_gff, break_contig, get_intra_contigs
 
 
+def update_misasm_features(features, breaks, contig, ctg_len):
+
+    # Get ctg len from ReadCoverage object
+    break_list = [0] + sorted(breaks) + [ctg_len]
+    borders = []
+    for i in range(len(break_list) - 1):
+        borders.append((break_list[i], break_list[i+1]))
+
+    # Pop the features to be updated
+    contig_feats = features.pop(contig)
+
+    # Initialize lists for new broken contig headers
+    for i in range(len(borders)):
+        features[contig + '_misasm_break:' + str(borders[i][0]) + '-' + str(borders[i][1])] = []
+
+    t = IntervalTree()
+    for i in borders:
+        t[i[0]:i[1]] = i
+
+    for i in contig_feats:
+        query = t[i.start]
+        assert len(query) == 1
+        break_start = list(query)[0].begin
+        break_end = list(query)[0].end
+        query_border = (break_start, break_end)
+        break_number = borders.index(query_border)
+        i.seqname = contig + '_misasm_break:' + str(borders[break_number][0]) + '-' + str(borders[break_number][1])
+        i.start = i.start - break_start
+        i.end = i.end - break_start
+        features[
+            contig + '_misasm_break:' + str(borders[break_number][0]) + '-' + str(borders[break_number][1])].append(i)
+
+    return features
+
+
 def remove_gff_breaks(gff_ins, breaks):
     """
     Given a list of candidate breakpoints proposed by misassembly correction, remove any such break points that
@@ -35,9 +70,16 @@ def remove_gff_breaks(gff_ins, breaks):
     return [i for i in breaks if not t[i]]
 
 
-def write_misasm_broken_ctgs(contigs_file, breaks, out_prefix):
+def write_misasm_broken_ctgs(contigs_file, breaks, out_prefix, in_gff=None, in_gff_name=None):
     current_path = os.getcwd()
     os.chdir('ctg_alignments')
+
+    if in_gff and in_gff_name:
+        with open(in_gff_name, 'w') as f:
+            for i in in_gff.keys():
+                for j in in_gff[i]:
+                    f.write(str(j) + '\n')
+
     x = SeqReader("../../" + contigs_file)
     f = open(out_prefix + ".misasm.break.fa", 'w')
     for header, seq in x.parse_fasta():
@@ -346,7 +388,7 @@ def write_broken_files(in_contigs, in_contigs_name, in_gff=None, in_gff_name=Non
         os.makedirs(output_path)
 
     os.chdir('chimera_break')
-    if in_gff:
+    if in_gff and in_gff_name:
         with open(in_gff_name, 'w') as f:
             for i in in_gff.keys():
                 for j in in_gff[i]:
@@ -667,9 +709,15 @@ if __name__ == "__main__":
                 candidates = remove_gff_breaks(features[i], candidates)
             if candidates:
                 val_candidate_breaks[i] = list(set(candidates))
+                if gff_file:
+                    features = update_misasm_features(features, val_candidate_breaks[i], i, cov_map.ctg_lens[i])
 
         # Break the contigs
-        write_misasm_broken_ctgs(contigs_file, val_candidate_breaks, contigs_file[:contigs_file.rfind('.')])
+        if gff_file:
+            out_misasm_gff = gff_file[:gff_file.rfind('.')] + '.misasm.broken.gff'
+            write_misasm_broken_ctgs(contigs_file, val_candidate_breaks, contigs_file[:contigs_file.rfind('.')], in_gff=features, in_gff_name=out_misasm_gff)
+        else:
+            write_misasm_broken_ctgs(contigs_file, val_candidate_breaks, contigs_file[:contigs_file.rfind('.')])
 
         # Align the broken contigs back to the reference
         align_misasm_broken(contigs_file[:contigs_file.rfind('.')])
