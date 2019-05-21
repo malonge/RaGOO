@@ -191,20 +191,21 @@ class ReadCoverage:
             ins_ind = bisect.bisect_left(self.coverage_map[header], (i, 0))
             # Get the coverage for positions within 50 kbp of the candidate coverage position
             # Exclude positions near the ends of the sequence.
-            ind_range = self._get_index_range(header, ins_ind, 100000)
+            ind_range = self._get_index_range(header, ins_ind, 50000)
 
-            # Check for low coverage
-            lowest_cov = min(self.coverage_map[header][ind_range[0]:ind_range[-1]], key=lambda x: x[1])
-            if lowest_cov[1] < min_cov:
-                supported_breaks.append(lowest_cov)
-                break_types.append('l')
-                continue
+            if len(set(ind_range)) > 1:
+                # Check for low coverage
+                lowest_cov = min(self.coverage_map[header][ind_range[0]:ind_range[-1]], key=lambda x: x[1])
+                if lowest_cov[1] < min_cov:
+                    supported_breaks.append(lowest_cov)
+                    break_types.append('l')
+                    continue
 
-            # Check for high coverage
-            highest_cov = max(self.coverage_map[header][ind_range[0]:ind_range[-1]], key=lambda x: x[1])
-            if highest_cov[1] > max_cov:
-                supported_breaks.append(highest_cov)
-                break_types.append('h')
+                # Check for high coverage
+                highest_cov = max(self.coverage_map[header][ind_range[0]:ind_range[-1]], key=lambda x: x[1])
+                if highest_cov[1] > max_cov:
+                    supported_breaks.append(highest_cov)
+                    break_types.append('h')
 
         return self._smooth_supported_breaks(supported_breaks, break_types)
 

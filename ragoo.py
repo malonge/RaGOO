@@ -39,7 +39,7 @@ def write_misasm_broken_ctgs(contigs_file, breaks, out_prefix):
     current_path = os.getcwd()
     os.chdir('ctg_alignments')
     x = SeqReader("../../" + contigs_file)
-    f = open(out_prefix + ".misasm.break.fasta", 'w')
+    f = open(out_prefix + ".misasm.break.fa", 'w')
     for header, seq in x.parse_fasta():
         header = header[1:]
         if header not in breaks:
@@ -335,7 +335,7 @@ def create_pseudomolecules(in_contigs_file, in_unique_contigs, gap_size, chr0=Tr
     # Write the final sequences out to a file
     with open('ragoo.fasta', 'w') as f:
         for out_header in all_pms:
-            f.write(out_header + "_RaGOO\n")
+            f.write(">" + out_header + "_RaGOO\n")
             f.write(all_pms[out_header])
 
 
@@ -468,7 +468,7 @@ if __name__ == "__main__":
     parser.add_argument("-gff", metavar="<annotations.gff>", type=str, default='', help="lift-over gff features to chimera-broken contigs")
     parser.add_argument("-m", metavar="PATH", type=str, default="minimap2", help='path to minimap2 executable')
     parser.add_argument("-b", action='store_true', default=False, help="Break chimeric contigs")
-    parser.add_argument("-R", metavar="<reads.fast[q/a](.gz)>", type=str, default="", help="Turns on misassembly correction. Align provided reads to the contigs to aid misassembly correction. Turns off '-b'.")
+    parser.add_argument("-R", metavar="<reads.fasta>", type=str, default="", help="Turns on misassembly correction. Align provided reads to the contigs to aid misassembly correction. fastq or fasta allowed. Gzipped files allowed. Turns off '-b'.")
     parser.add_argument("-T", metavar="sr", type=str, default="", help="Type of reads provided by '-R'. 'sr' and 'corr' accepted for short reads and error corrected long reads respectively.")
     parser.add_argument("-p", metavar="5", type=int, default=5, help=argparse.SUPPRESS)
     parser.add_argument("-l", metavar="10000", type=int, default=10000, help=argparse.SUPPRESS)
@@ -507,7 +507,7 @@ if __name__ == "__main__":
     skip_file = args.j
     corr_reads = args.R
     corr_reads_tech = args.T
-    make_chr0 = args.C
+    make_chr0 = not args.C
 
     if corr_reads:
         log("Misassembly correction has been turned on. This automatically inactivates chimeric contig correction.")
