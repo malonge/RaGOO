@@ -367,9 +367,9 @@ def create_pseudomolecules(in_contigs_file, in_unique_contigs, gap_size, chr0=Tr
         else:
             # Instead of making a chromosome 0, add the unplaced sequences as is.
             for header in remaining_contig_headers:
-                all_pms[header] = all_seqs[header] + "\n"
-                f_chr0_g = open('groupings/' + header + '_contigs.txt', 'w')
-                f_chr0_o = open('orderings/' + header + '_orderings.txt', 'w')
+                all_pms[header[1:]] = all_seqs[header] + "\n"
+                f_chr0_g = open('groupings/' + header[1:] + '_contigs.txt', 'w')
+                f_chr0_o = open('orderings/' + header[1:] + '_orderings.txt', 'w')
                 f_chr0_g.write(header[1:] + "\t" + "0" + '\n')
                 f_chr0_o.write(header[1:] + '\t' + "+" + '\t' + "0" + '\t' + "0" + '\n')
                 f_chr0_g.close()
