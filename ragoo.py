@@ -332,17 +332,18 @@ def create_pseudomolecules(in_contigs_file, in_unique_contigs, gap_size, chr0=Tr
     for this_chrom in all_chroms:
         orderings_file = 'orderings/' + this_chrom + '_orderings.txt'
         orderings = get_orderings(orderings_file)
-        seq_list = []
-        for line in orderings:
-            # Mark that we have seen this contig
-            remaining_contig_headers.pop(remaining_contig_headers.index('>' + line[0]))
-            if line[1] == '+':
-                seq_list.append(all_seqs['>' + line[0]])
-            else:
-                assert line[1] == '-'
-                seq_list.append(reverse_complement(all_seqs['>' + line[0]]))
-        all_pms[this_chrom] = pad.join(seq_list)
-        all_pms[this_chrom] += '\n'
+        if orderings:
+            seq_list = []
+            for line in orderings:
+                # Mark that we have seen this contig
+                remaining_contig_headers.pop(remaining_contig_headers.index('>' + line[0]))
+                if line[1] == '+':
+                    seq_list.append(all_seqs['>' + line[0]])
+                else:
+                    assert line[1] == '-'
+                    seq_list.append(reverse_complement(all_seqs['>' + line[0]]))
+            all_pms[this_chrom] = pad.join(seq_list)
+            all_pms[this_chrom] += '\n'
 
     # Get unincorporated sequences and place them in Chr0
     if remaining_contig_headers:
