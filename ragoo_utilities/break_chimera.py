@@ -120,11 +120,6 @@ def avoid_gff_intervals(borders, gff_ins):
 
 
 def update_gff(features, borders, contig):
-    """
-    :param features: Inout features for all contigs
-    :param borders: All borders where chimeric contig was broken
-    :return: features with start and end updated according to new genomic coordinates as well as updated headers
-    """
     # Pop the features to be updated
     contig_feats = features.pop(contig)
 

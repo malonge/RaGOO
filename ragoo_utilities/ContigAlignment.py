@@ -7,16 +7,11 @@ from ragoo_utilities.utilities import summarize_planesweep, binary_search
 class ContigAlignment:
     """
     This object will represent a contig's alignment to a reference chromosome.
-    Specifically, this class will organize aligments in a one-to-many fashion, where
+    Specifically, this class will organize alignments in a one-to-many fashion, where
     we will only have one object per contig, and each object will store all of the alignments
     of that contig.
 
-    The ultimate goal is to uniquely assign every contig to a chromosome. In the case where the
-    contig only aligns to one chromosome, the answer is already solved.
 
-    If one contig maps to many chromosomes, we will have to find a way to find the 'best'
-    chromosome for that contig given the nucmer alignment metrics. This object should store
-    all such alignment metrics which might be helpful for this.
     """
 
     def __init__(self, in_contig):
@@ -42,12 +37,34 @@ class ContigAlignment:
         self.aln_lens = []
         self.mapqs = []
 
+        self._is_unique_anchor_filtered = False
+        self._is_merged = False
+
     def __repr__(self):
         return '<ContigAlignment' + self.contig + '>'
 
     def __str__(self):
-        """ Return a tab delimited string. Number of lines = number of alignments."""
-        return ','.join(list(set(self.ref_headers)))
+        """ Return the alignments in sorted PAF format. """
+        self.sort_by_query()
+        all_alns = []
+        for i in range(len(self.ref_headers)):
+            all_alns.append(
+                "\t".join([
+                    self.contig,
+                    str(self.query_lens[i]),
+                    str(self.query_starts[i]),
+                    str(self.query_ends[i]),
+                    self.strands[i],
+                    self.ref_headers[i],
+                    str(self.ref_lens[i]),
+                    str(self.ref_starts[i]),
+                    str(self.ref_ends[i]),
+                    str(self.num_matches[i]),
+                    str(self.aln_lens[i]),
+                    str(self.mapqs[i])
+                ])
+            )
+        return "\n".join(all_alns)
 
     def get_attr_lens(self):
         all_lens = [
@@ -99,6 +116,20 @@ class ContigAlignment:
         s1 = set(self.ref_headers)
         return len(s1)
 
+    def rearrange_alns(self, hits):
+        """ Generally re structure the alignments according to 'hits', an ordered list of indices. """
+        self.query_lens = [self.query_lens[i] for i in hits]
+        self.query_starts = [self.query_starts[i] for i in hits]
+        self.query_ends = [self.query_ends[i] for i in hits]
+        self.strands = [self.strands[i] for i in hits]
+        self.ref_headers = [self.ref_headers[i] for i in hits]
+        self.ref_lens = [self.ref_lens[i] for i in hits]
+        self.ref_starts = [self.ref_starts[i] for i in hits]
+        self.ref_ends = [self.ref_ends[i] for i in hits]
+        self.num_matches = [self.num_matches[i] for i in hits]
+        self.aln_lens = [self.aln_lens[i] for i in hits]
+        self.mapqs = [self.mapqs[i] for i in hits]
+
     def filter_ref_chroms(self, in_chroms):
         """
         Given a list of chromosomes, mutate this object so as to only include alignments to those chromosomes.
@@ -108,35 +139,23 @@ class ContigAlignment:
             if self.ref_headers[i] in in_chroms:
                 hits.append(i)
 
-        self.query_lens = [self.query_lens[i] for i in hits]
-        self.query_starts = [self.query_starts[i] for i in hits]
-        self.query_ends = [self.query_ends[i] for i in hits]
-        self.strands = [self.strands[i] for i in hits]
-        self.ref_headers = [self.ref_headers[i] for i in hits]
-        self.ref_lens = [self.ref_lens[i] for i in hits]
-        self.ref_starts = [self.ref_starts[i] for i in hits]
-        self.ref_ends = [self.ref_ends[i] for i in hits]
-        self.num_matches = [self.num_matches[i] for i in hits]
-        self.aln_lens = [self.aln_lens[i] for i in hits]
-        self.mapqs = [self.mapqs[i] for i in hits]
+        self.rearrange_alns(hits)
 
     def sort_by_ref(self):
         ref_pos = []
         for i in range(len(self.ref_headers)):
-            ref_pos.append((self.ref_starts[i], self.ref_ends[i], i))
-        hits = [i[2] for i in sorted(ref_pos)]
+            ref_pos.append((self.ref_headers[i], self.ref_starts[i], self.ref_ends[i], i))
+        hits = [i[3] for i in sorted(ref_pos)]
 
-        self.query_lens = [self.query_lens[i] for i in hits]
-        self.query_starts = [self.query_starts[i] for i in hits]
-        self.query_ends = [self.query_ends[i] for i in hits]
-        self.strands = [self.strands[i] for i in hits]
-        self.ref_headers = [self.ref_headers[i] for i in hits]
-        self.ref_lens = [self.ref_lens[i] for i in hits]
-        self.ref_starts = [self.ref_starts[i] for i in hits]
-        self.ref_ends = [self.ref_ends[i] for i in hits]
-        self.num_matches = [self.num_matches[i] for i in hits]
-        self.aln_lens = [self.aln_lens[i] for i in hits]
-        self.mapqs = [self.mapqs[i] for i in hits]
+        self.rearrange_alns(hits)
+
+    def sort_by_query(self):
+        q_pos = []
+        for i in range(len(self.ref_headers)):
+            q_pos.append((self.query_starts[i], self.query_ends[i], i))
+        hits = [i[2] for i in sorted(q_pos)]
+
+        self.rearrange_alns(hits)
 
     def exclude_ref_chroms(self, exclude_list):
         hits = []
@@ -144,17 +163,7 @@ class ContigAlignment:
             if self.ref_headers[i] not in exclude_list:
                 hits.append(i)
 
-        self.query_lens = [self.query_lens[i] for i in hits]
-        self.query_starts = [self.query_starts[i] for i in hits]
-        self.query_ends = [self.query_ends[i] for i in hits]
-        self.strands = [self.strands[i] for i in hits]
-        self.ref_headers = [self.ref_headers[i] for i in hits]
-        self.ref_lens = [self.ref_lens[i] for i in hits]
-        self.ref_starts = [self.ref_starts[i] for i in hits]
-        self.ref_ends = [self.ref_ends[i] for i in hits]
-        self.num_matches = [self.num_matches[i] for i in hits]
-        self.aln_lens = [self.aln_lens[i] for i in hits]
-        self.mapqs = [self.mapqs[i] for i in hits]
+        self.rearrange_alns(hits)
 
     def filter_lengths(self, l):
         hits = []
@@ -162,17 +171,7 @@ class ContigAlignment:
             if self.aln_lens[i] > l:
                 hits.append(i)
 
-        self.query_lens = [self.query_lens[i] for i in hits]
-        self.query_starts = [self.query_starts[i] for i in hits]
-        self.query_ends = [self.query_ends[i] for i in hits]
-        self.strands = [self.strands[i] for i in hits]
-        self.ref_headers = [self.ref_headers[i] for i in hits]
-        self.ref_lens = [self.ref_lens[i] for i in hits]
-        self.ref_starts = [self.ref_starts[i] for i in hits]
-        self.ref_ends = [self.ref_ends[i] for i in hits]
-        self.num_matches = [self.num_matches[i] for i in hits]
-        self.aln_lens = [self.aln_lens[i] for i in hits]
-        self.mapqs = [self.mapqs[i] for i in hits]
+        self.rearrange_alns(hits)
 
     def unique_anchor_filter(self):
         """
@@ -187,23 +186,90 @@ class ContigAlignment:
         web analytics tool for the detection of variants from an
         assembly." Bioinformatics 32.19 (2016): 3021-3023.
         """
-        lines_by_query = []
-        for i, j in zip(self.query_starts, self.query_ends):
-            lines_by_query.append((i, j))
 
-        hits = summarize_planesweep(lines_by_query, 10000)
+        if not self._is_unique_anchor_filtered:
+            lines_by_query = []
+            for i, j in zip(self.query_starts, self.query_ends):
+                lines_by_query.append((i, j))
 
-        self.query_lens = [self.query_lens[i] for i in hits]
-        self.query_starts = [self.query_starts[i] for i in hits]
-        self.query_ends = [self.query_ends[i] for i in hits]
-        self.strands = [self.strands[i] for i in hits]
-        self.ref_headers = [self.ref_headers[i] for i in hits]
-        self.ref_lens = [self.ref_lens[i] for i in hits]
-        self.ref_starts = [self.ref_starts[i] for i in hits]
-        self.ref_ends = [self.ref_ends[i] for i in hits]
-        self.num_matches = [self.num_matches[i] for i in hits]
-        self.aln_lens = [self.aln_lens[i] for i in hits]
-        self.mapqs = [self.mapqs[i] for i in hits]
+            hits = summarize_planesweep(lines_by_query, 10000)
+            self.rearrange_alns(hits)
+            self._is_unique_anchor_filtered = True
+
+    def merge_alns(self, merge_dist=100000):
+        """
+        Merge chains of alignments that are to the same target, have the same orientation, and are less than
+        merge_dist away from each other.
+        :param merge_dist:
+        :return:
+        """
+        # Sort the alignments
+        self.sort_by_ref()
+
+        # Might also want to filter out low identity alignments
+
+        # Keep track of which alignments we are comparing
+        i = 0
+        j = 1
+        while j < len(self.ref_headers):
+            if all([
+                self.ref_headers[i] == self.ref_headers[j],
+                self.strands[i] == self.strands[j],
+                self.ref_starts[j] - self.ref_ends[i] <= merge_dist
+            ]):
+                # Merge the alignments in place of the first alignment
+                self.ref_starts[i] = min(self.ref_starts[i], self.ref_starts[j])
+                self.ref_ends[i] = max(self.ref_ends[i], self.ref_ends[j])
+                self.query_starts[i] = min(self.query_starts[i], self.query_starts[j])
+                self.query_ends[i] = max(self.query_ends[i], self.query_ends[j])
+
+                self.num_matches[i] += self.num_matches[j]
+                self.aln_lens[i] = self.ref_ends[i] - self.ref_starts[i]
+                self.mapqs[i] = (self.mapqs[i] + self.mapqs[j])//2
+
+                # Remove the redundant alignment
+                self.query_lens.pop(j)
+                self.query_starts.pop(j)
+                self.query_ends.pop(j)
+                self.strands.pop(j)
+                self.ref_headers.pop(j)
+                self.ref_lens.pop(j)
+                self.ref_starts.pop(j)
+                self.ref_ends.pop(j)
+                self.num_matches.pop(j)
+                self.aln_lens.pop(j)
+                self.mapqs.pop(j)
+            else:
+                i += 1
+                j += 1
+
+        # remove contained alignments. contained w.r.t the contig
+        cont_inds = []
+        for i in range(len(self.ref_headers)):
+            for j in range(len(self.ref_headers)):
+                # Check if j is contained by i
+                if i == j:
+                    continue
+                if self.query_starts[i] <= self.query_starts[j] and self.query_ends[i] >= self.query_ends[j]:
+                    cont_inds.append(j)
+
+        hits = [i for i in range(len(self.ref_headers)) if i not in cont_inds]
+        self.rearrange_alns(hits)
+
+        self._is_merged = True
+
+    def get_break_candidates(self):
+        if not self._is_merged:
+            raise ValueError("Alignments must first be merged.")
+
+        self.sort_by_query()
+        all_candidates = []
+        for i in range(1, len(self.ref_headers)):
+            all_candidates.append(min(self.query_ends[i-1], self.query_starts[i]))
+            all_candidates.append(max(self.query_ends[i-1], self.query_starts[i]))
+
+        return all_candidates
+
 
 
 class UniqueContigAlignment:
@@ -269,6 +335,7 @@ class UniqueContigAlignment:
         self.confidence = ranges[max_chrom]/sum(ranges.values())
         assert self.confidence >= 0
         assert self.confidence <= 1
+
 
 class LongestContigAlignment:
     """

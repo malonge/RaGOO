@@ -1,17 +1,113 @@
 #!/usr/bin/env python
 from collections import defaultdict
+from collections import OrderedDict
 import copy
 
 from intervaltree import IntervalTree
 
 from ragoo_utilities.PAFReader import PAFReader
 from ragoo_utilities.SeqReader import SeqReader
+from ragoo_utilities.ReadCoverage import ReadCoverage
 from ragoo_utilities.ContigAlignment import ContigAlignment
 from ragoo_utilities.ContigAlignment import UniqueContigAlignment
 from ragoo_utilities.ContigAlignment import LongestContigAlignment
 from ragoo_utilities.GFFReader import GFFReader
 from ragoo_utilities.utilities import run, log, reverse_complement, read_contigs
 from ragoo_utilities.break_chimera import get_ref_parts, cluster_contig_alns, avoid_gff_intervals, update_gff, break_contig, get_intra_contigs
+
+
+def update_misasm_features(features, breaks, contig, ctg_len):
+
+    # Get ctg len from ReadCoverage object
+    break_list = [0] + sorted(breaks) + [ctg_len]
+    borders = []
+    for i in range(len(break_list) - 1):
+        borders.append((break_list[i], break_list[i+1]))
+
+    # Pop the features to be updated
+    contig_feats = features.pop(contig)
+
+    # Initialize lists for new broken contig headers
+    for i in range(len(borders)):
+        features[contig + '_misasm_break:' + str(borders[i][0]) + '-' + str(borders[i][1])] = []
+
+    t = IntervalTree()
+    for i in borders:
+        t[i[0]:i[1]] = i
+
+    for i in contig_feats:
+        query = t[i.start]
+        assert len(query) == 1
+        break_start = list(query)[0].begin
+        break_end = list(query)[0].end
+        query_border = (break_start, break_end)
+        break_number = borders.index(query_border)
+        i.seqname = contig + '_misasm_break:' + str(borders[break_number][0]) + '-' + str(borders[break_number][1])
+        i.start = i.start - break_start
+        i.end = i.end - break_start
+        features[
+            contig + '_misasm_break:' + str(borders[break_number][0]) + '-' + str(borders[break_number][1])].append(i)
+
+    return features
+
+
+def remove_gff_breaks(gff_ins, breaks):
+    """
+    Given a list of candidate breakpoints proposed by misassembly correction, remove any such break points that
+    fall within the interval of a gff feature. This should be called once per contig.
+    :param gff_ins: List of GFFLines
+    :param breaks: candidate break points
+    :return:
+    """
+    # Make an interval tree from the intervals of the gff lines
+    t = IntervalTree()
+    for line in gff_ins:
+        # If the interval is one bp long, skip
+        if line.start == line.end:
+            continue
+        t[line.start:line.end] = (line.start, line.end)
+
+    return [i for i in breaks if not t[i]]
+
+
+def write_misasm_broken_ctgs(contigs_file, breaks, out_prefix, in_gff=None, in_gff_name=None):
+    current_path = os.getcwd()
+    os.chdir('ctg_alignments')
+
+    if in_gff and in_gff_name:
+        with open(in_gff_name, 'w') as f:
+            for i in in_gff.keys():
+                for j in in_gff[i]:
+                    f.write(str(j) + '\n')
+
+    x = SeqReader("../../" + contigs_file)
+    f = open(out_prefix + ".misasm.break.fa", 'w')
+    for header, seq in x.parse_fasta():
+        header = header[1:]
+        if header not in breaks:
+            f.write(">" + header + "\n")
+            f.write(seq + "\n")
+        else:
+            # Break the contig
+            ctg_len = len(seq)
+            break_list = [0] + sorted(breaks[header]) + [ctg_len]
+            for i in range(len(break_list) - 1):
+                f.write(">" + header + "_misasm_break:" + str(break_list[i]) + "-" + str(break_list[i+1]) + "\n")
+                f.write(seq[break_list[i]:break_list[i+1]] + "\n")
+    os.chdir(current_path)
+
+
+def align_misasm_broken(out_prefix):
+    current_path = os.getcwd()
+    os.chdir('ctg_alignments')
+
+    ctgs_file = out_prefix + ".misasm.break.fa"
+    cmd = '{} -k19 -w19 -t{} ../../{}  {} ' \
+          '> contigs_brk_against_ref.paf 2> contigs_brk_against_ref.paf.log'.format(minimap_path, t, reference_file,
+                                                                            ctgs_file)
+    if not os.path.isfile('contigs_brk_against_ref.paf'):
+        run(cmd)
+    os.chdir(current_path)
 
 
 def write_contig_clusters(unique_dict, thresh, skip_list):
@@ -37,7 +133,7 @@ def write_contig_clusters(unique_dict, thresh, skip_list):
     os.chdir(current_path)
 
 
-def clean_alignments(in_alns, l=10000, in_exclude_file='', uniq_anchor_filter=False):
+def clean_alignments(in_alns, l=10000, in_exclude_file='', uniq_anchor_filter=False, merge=False):
     # Exclude alignments to undesired reference headers and filter alignment lengths.
     exclude_list = []
     if in_exclude_file:
@@ -51,6 +147,11 @@ def clean_alignments(in_alns, l=10000, in_exclude_file='', uniq_anchor_filter=Fa
         in_alns[header].filter_lengths(l)
         if uniq_anchor_filter:
             in_alns[header].unique_anchor_filter()
+
+        if merge:
+            in_alns[header].merge_alns()
+
+        # Check if our filtering has removed all alignments for a contig
         if len(in_alns[header].ref_headers) == 0:
             empty_headers.append(header)
 
@@ -206,7 +307,7 @@ def get_orderings(in_orderings_file):
     return all_orderings
 
 
-def create_pseudomolecules(in_contigs_file, in_unique_contigs, gap_size):
+def create_pseudomolecules(in_contigs_file, in_unique_contigs, gap_size, chr0=True):
     """
     Need to make a translation table for easy lift-over.
     :param in_contigs_file:
@@ -216,7 +317,7 @@ def create_pseudomolecules(in_contigs_file, in_unique_contigs, gap_size):
     """
     # First, read all of the contigs into memory
     remaining_contig_headers = []
-    all_seqs = dict()
+    all_seqs = OrderedDict()
     x = SeqReader('../' + in_contigs_file)
     for header, seq in x.parse_fasta():
         remaining_contig_headers.append(header.split(' ')[0])
@@ -231,47 +332,54 @@ def create_pseudomolecules(in_contigs_file, in_unique_contigs, gap_size):
     for this_chrom in all_chroms:
         orderings_file = 'orderings/' + this_chrom + '_orderings.txt'
         orderings = get_orderings(orderings_file)
-        seq_list = []
-        for line in orderings:
-            # Mark that we have seen this contig
-            remaining_contig_headers.pop(remaining_contig_headers.index('>' + line[0]))
-            if line[1] == '+':
-                seq_list.append(all_seqs['>' + line[0]])
-            else:
-                assert line[1] == '-'
-                seq_list.append(reverse_complement(all_seqs['>' + line[0]]))
-        all_pms[this_chrom] = pad.join(seq_list)
-        all_pms[this_chrom] += pad
-        all_pms[this_chrom] += '\n'
+        if orderings:
+            seq_list = []
+            for line in orderings:
+                # Mark that we have seen this contig
+                remaining_contig_headers.pop(remaining_contig_headers.index('>' + line[0]))
+                if line[1] == '+':
+                    seq_list.append(all_seqs['>' + line[0]])
+                else:
+                    assert line[1] == '-'
+                    seq_list.append(reverse_complement(all_seqs['>' + line[0]]))
+            all_pms[this_chrom] = pad.join(seq_list)
+            all_pms[this_chrom] += '\n'
 
     # Get unincorporated sequences and place them in Chr0
-    chr0_headers = []
-    chr0_seq_list = []
-    for header in remaining_contig_headers:
-        chr0_headers.append(header)
-        chr0_seq_list.append(all_seqs[header])
-    all_pms['Chr0'] = pad.join(chr0_seq_list)
-    all_pms['Chr0'] += pad
-    all_pms['Chr0'] += '\n'
+    if remaining_contig_headers:
+        if chr0:
+            chr0_headers = []
+            chr0_seq_list = []
+            for header in remaining_contig_headers:
+                chr0_headers.append(header)
+                chr0_seq_list.append(all_seqs[header])
+            all_pms['Chr0'] = pad.join(chr0_seq_list)
+            all_pms['Chr0'] += '\n'
 
-    # Write out the list of chr0 headers
-    f_chr0_g = open('groupings/Chr0_contigs.txt', 'w')
-    f_chr0_o = open('orderings/Chr0_orderings.txt', 'w')
-    for i in chr0_headers:
-        f_chr0_g.write(i[1:] + "\t" + "0" + '\n')
-        f_chr0_o.write(i[1:] + '\t' + "+" + '\t' + "0" + '\t' + "0" + '\n')
-    f_chr0_g.close()
-    f_chr0_o.close()
-
-
+            # Write out the list of chr0 headers
+            f_chr0_g = open('groupings/Chr0_contigs.txt', 'w')
+            f_chr0_o = open('orderings/Chr0_orderings.txt', 'w')
+            for i in chr0_headers:
+                f_chr0_g.write(i[1:] + "\t" + "0" + '\n')
+                f_chr0_o.write(i[1:] + '\t' + "+" + '\t' + "0" + '\t' + "0" + '\n')
+            f_chr0_g.close()
+            f_chr0_o.close()
+        else:
+            # Instead of making a chromosome 0, add the unplaced sequences as is.
+            for header in remaining_contig_headers:
+                all_pms[header[1:]] = all_seqs[header] + "\n"
+                f_chr0_g = open('groupings/' + header[1:] + '_contigs.txt', 'w')
+                f_chr0_o = open('orderings/' + header[1:] + '_orderings.txt', 'w')
+                f_chr0_g.write(header[1:] + "\t" + "0" + '\n')
+                f_chr0_o.write(header[1:] + '\t' + "+" + '\t' + "0" + '\t' + "0" + '\n')
+                f_chr0_g.close()
+                f_chr0_o.close()
 
     # Write the final sequences out to a file
     with open('ragoo.fasta', 'w') as f:
-        f.write('>Chr0_RaGOO\n')
-        f.write(all_pms['Chr0'])
-        for header in all_chroms:
-            f.write('>' + header + '_RaGOO\n')
-            f.write(all_pms[header])
+        for out_header in all_pms:
+            f.write(">" + out_header + "_RaGOO\n")
+            f.write(all_pms[out_header])
 
 
 def write_broken_files(in_contigs, in_contigs_name, in_gff=None, in_gff_name=None):
@@ -281,7 +389,7 @@ def write_broken_files(in_contigs, in_contigs_name, in_gff=None, in_gff_name=Non
         os.makedirs(output_path)
 
     os.chdir('chimera_break')
-    if in_gff:
+    if in_gff and in_gff_name:
         with open(in_gff_name, 'w') as f:
             for i in in_gff.keys():
                 for j in in_gff[i]:
@@ -369,11 +477,33 @@ def get_SVs(sv_min, sv_max, in_ref_file):
     os.chdir(current_path)
 
 
+def align_reads(m_path, num_threads, in_ctg_file, reads, tech='ont'):
+    current_path = os.getcwd()
+    output_path = current_path + '/ctg_alignments'
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+    os.chdir('ctg_alignments')
+
+    if tech == 'sr':
+        cmd = '{} -x sr -t{} ../../{} ../../{} ' \
+              '> reads_against_ctg.paf 2> reads_against_ctg.paf.log'.format(m_path, num_threads, in_ctg_file, reads)
+    elif tech == 'corr':
+        cmd = '{} -x asm10 -t{} ../../{} ../../{} ' \
+              '> reads_against_ctg.paf 2> reads_against_ctg.paf.log'.format(m_path, num_threads, in_ctg_file, reads)
+    else:
+        raise ValueError("Only 'sr' or 'corr' are accepted for read type.")
+
+    if not os.path.isfile('reads_against_ctg.paf'):
+        run(cmd)
+
+    os.chdir(current_path)
+
+
 if __name__ == "__main__":
     import os
     import argparse
 
-    parser = argparse.ArgumentParser(description='order and orient contigs according to minimap2 alignments to a reference')
+    parser = argparse.ArgumentParser(description='order and orient contigs according to minimap2 alignments to a reference (v1.1)')
     parser.add_argument("contigs", metavar="<contigs.fasta>", type=str, help="fasta file with contigs to be ordered and oriented")
     parser.add_argument("reference", metavar="<reference.fasta>", type=str, help="reference fasta file")
     #parser.add_argument("-o", metavar="PATH", type=str, default="ragoo_output", help="output directory name")
@@ -381,6 +511,8 @@ if __name__ == "__main__":
     parser.add_argument("-gff", metavar="<annotations.gff>", type=str, default='', help="lift-over gff features to chimera-broken contigs")
     parser.add_argument("-m", metavar="PATH", type=str, default="minimap2", help='path to minimap2 executable')
     parser.add_argument("-b", action='store_true', default=False, help="Break chimeric contigs")
+    parser.add_argument("-R", metavar="<reads.fasta>", type=str, default="", help="Turns on misassembly correction. Align provided reads to the contigs to aid misassembly correction. fastq or fasta allowed. Gzipped files allowed. Turns off '-b'.")
+    parser.add_argument("-T", metavar="sr", type=str, default="", help="Type of reads provided by '-R'. 'sr' and 'corr' accepted for short reads and error corrected long reads respectively.")
     parser.add_argument("-p", metavar="5", type=int, default=5, help=argparse.SUPPRESS)
     parser.add_argument("-l", metavar="10000", type=int, default=10000, help=argparse.SUPPRESS)
     parser.add_argument("-r", metavar="100000", type=int, default=100000, help=argparse.SUPPRESS)
@@ -393,6 +525,7 @@ if __name__ == "__main__":
     parser.add_argument("-f", metavar="10000", type=int, default=10000, help=argparse.SUPPRESS)
     parser.add_argument("-i", metavar="0.2", type=float, default=0.2, help="Minimum grouping confidence score needed to be localized.")
     parser.add_argument("-j", metavar="<skip.txt>", type=str, default="", help="List of contigs to automatically put in chr0.")
+    parser.add_argument("-C", action='store_true', default=False, help="Write unplaced contigs individually at the end of making a chr0")
 
     # Get the command line arguments
     args = parser.parse_args()
@@ -415,6 +548,17 @@ if __name__ == "__main__":
     f = args.f
     group_score_thresh = args.i
     skip_file = args.j
+    corr_reads = args.R
+    corr_reads_tech = args.T
+    make_chr0 = not args.C
+
+    if corr_reads:
+        log("Misassembly correction has been turned on. This automatically inactivates chimeric contig correction.")
+        break_chimeras = False
+
+    # Make sure that if -R, -T has been specified
+    if corr_reads and not corr_reads_tech:
+        raise ValueError("'-T' must be provided when using -R.")
 
     skip_ctg = []
     if skip_file:
@@ -436,13 +580,13 @@ if __name__ == "__main__":
         run(cmd)
 
     # Read in the minimap2 alignments just generated
-    log('-- Reading alignments')
+    log('Reading alignments')
     alns = read_paf_alignments('contigs_against_ref.paf')
     alns = clean_alignments(alns, l=1000, in_exclude_file=exclude_file)
 
     # Process the gff file
     if gff_file:
-        log('-- Getting gff features')
+        log('Getting gff features')
         features = defaultdict(list)
         z = GFFReader('../' + gff_file)
         for i in z.parse_gff():
@@ -456,17 +600,17 @@ if __name__ == "__main__":
 
         alns = clean_alignments(alns, l=10000, in_exclude_file=exclude_file, uniq_anchor_filter=True)
         # Process contigs
-        log('-- Getting contigs')
+        log('Getting contigs')
         contigs_dict = read_contigs('../' + contigs_file)
 
-        log('-- Finding interchromosomally chimeric contigs')
+        log('Finding interchromosomally chimeric contigs')
         all_chimeras = dict()
         for i in alns.keys():
             ref_parts = get_ref_parts(alns[i], min_len, min_break_pct, min_range)
             if len(ref_parts) > 1:
                 all_chimeras[i] = ref_parts
 
-        log('-- Finding break points and breaking interchromosomally chimeric contigs')
+        log('Finding break points and breaking interchromosomally chimeric contigs')
         break_intervals = dict()
         for i in all_chimeras.keys():
             break_intervals[i] = cluster_contig_alns(i, alns, all_chimeras[i], min_len)
@@ -497,11 +641,11 @@ if __name__ == "__main__":
         align_breaks('inter', minimap_path, reference_file, out_inter_fasta, t)
 
         # Now, use those new alignments for intrachromosomal chimeras
-        log('-- Reading interchromosomal chimera broken alignments')
+        log('Reading interchromosomal chimera broken alignments')
         inter_alns = read_paf_alignments('chimera_break/inter_contigs_against_ref.paf')
         inter_alns = clean_alignments(inter_alns, l=1000, in_exclude_file=exclude_file)
 
-        log('-- Finding intrachromosomally chimeric contigs')
+        log('Finding intrachromosomally chimeric contigs')
         # Find intrachromosomally chimeric contigs
         for i in inter_alns.keys():
             intra = get_intra_contigs(inter_alns[i], 15000, intra_wrt_ref_min, intra_wrt_ctg_min)
@@ -534,17 +678,56 @@ if __name__ == "__main__":
         align_breaks('intra', minimap_path, reference_file, out_intra_fasta, t)
 
         # Read in alignments of intrachromosomal chimeras and proceed with ordering and orientation
-        log('-- Reading intrachromosomal chimera broken alignments')
+        log('Reading intrachromosomal chimera broken alignments')
         alns = read_paf_alignments('chimera_break/intra_contigs_against_ref.paf')
         alns = clean_alignments(alns, l=1000, in_exclude_file=exclude_file)
         contigs_file = '/ragoo_output/chimera_break/' + out_intra_fasta
-        log('-- The total number of interchromasomally chimeric contigs broken is %r' % total_inter_broken)
-        log('-- The total number of intrachromasomally chimeric contigs broken is %r' % total_intra_broken)
+        log('The total number of interchromasomally chimeric contigs broken is %r' % total_inter_broken)
+        log('The total number of intrachromasomally chimeric contigs broken is %r' % total_intra_broken)
 
+    # Check if misassembly correction is turned on. This is mutually exclusive with chimeric contig correction
+    if corr_reads:
+        # Align the raw reads to the assembly.
+        log('Aligning raw reads to contigs')
+        align_reads(minimap_path, t, contigs_file, corr_reads, corr_reads_tech)
+        log('Computing contig coverage')
+        cov_map = ReadCoverage('ctg_alignments/reads_against_ctg.paf')
+        alns = clean_alignments(alns, l=10000, in_exclude_file=exclude_file, uniq_anchor_filter=True, merge=True)
 
+        # Get the initial candidate break points.
+        candidate_breaks = dict()
+        for i in alns:
+            candidates = alns[i].get_break_candidates()
+            if candidates:
+                candidate_breaks[i] = candidates
+
+        # Validate each breakpoint by checking for excessively high or low coverage
+        # Also, if a gff is provided, check to ensure that we don't break within a gff feature interval
+        val_candidate_breaks = dict()
+        for i in candidate_breaks:
+            candidates = cov_map.check_break_cov(i, candidate_breaks[i])
+            if gff_file:
+                candidates = remove_gff_breaks(features[i], candidates)
+            if candidates:
+                val_candidate_breaks[i] = list(set(candidates))
+                if gff_file:
+                    features = update_misasm_features(features, val_candidate_breaks[i], i, cov_map.ctg_lens[i])
+
+        # Break the contigs
+        if gff_file:
+            out_misasm_gff = gff_file[:gff_file.rfind('.')] + '.misasm.broken.gff'
+            write_misasm_broken_ctgs(contigs_file, val_candidate_breaks, contigs_file[:contigs_file.rfind('.')], in_gff=features, in_gff_name=out_misasm_gff)
+        else:
+            write_misasm_broken_ctgs(contigs_file, val_candidate_breaks, contigs_file[:contigs_file.rfind('.')])
+
+        # Align the broken contigs back to the reference
+        align_misasm_broken(contigs_file[:contigs_file.rfind('.')])
+        alns = read_paf_alignments('ctg_alignments/contigs_brk_against_ref.paf')
+        alns = clean_alignments(alns, l=1000, in_exclude_file=exclude_file)
+        contigs_file = '/ragoo_output/ctg_alignments/' + contigs_file[:contigs_file.rfind('.')] + ".misasm.break.fa"
 
     # Assign each contig to a corresponding reference chromosome.
-    log('-- Assigning contigs')
+    log('Assigning contigs')
     all_unique_contigs = dict()
     for i in alns.keys():
         all_unique_contigs[i] = UniqueContigAlignment(alns[i])
@@ -552,17 +735,17 @@ if __name__ == "__main__":
     # Add to this the list of headers that did not make it
     write_contig_clusters(all_unique_contigs, group_score_thresh, skip_ctg)
 
-    log('-- Ordering and orienting contigs')
+    log('Ordering and orienting contigs')
     order_orient_contigs(all_unique_contigs, alns)
 
-    log('-- Creating Pseudomolecules')
-    create_pseudomolecules(contigs_file, all_unique_contigs, g)
+    log('Creating pseudomolecules')
+    create_pseudomolecules(contigs_file, all_unique_contigs, g, make_chr0)
 
     if call_svs:
-        log('-- Aligning pseudomolecules to reference')
+        log('Aligning pseudomolecules to reference')
         align_pms(minimap_path, t, reference_file)
 
-        log('-- Getting structural variants')
+        log('Getting structural variants')
         get_SVs(a, f, reference_file)
 
-    log('-- goodbye')
+    log('goodbye')

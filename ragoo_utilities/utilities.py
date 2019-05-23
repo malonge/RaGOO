@@ -20,14 +20,14 @@ def reverse_complement(seq):
 
 def run(cmnd):
     """ Run command and report status. """
-    log('-- Running : %s' % cmnd)
-    if subprocess.call(cmnd, shell=True) != 0:
+    log('Running : %s' % cmnd)
+    if subprocess.call(cmnd, shell=True, executable='/bin/bash') != 0:
         raise RuntimeError('Failed : %s ' % cmnd)
 
 
 def log(message):
     """ Log messages to standard output. """
-    print (time.ctime() + ' ' + message)
+    print(time.ctime() + ' --- ' + message, flush=True)
 
 
 def read_contigs(in_file):
