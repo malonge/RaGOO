@@ -72,8 +72,7 @@ optional arguments:
   -i 0.2                Minimum grouping confidence score needed to be
                         localized.
   -j <skip.txt>         List of contigs to automatically put in chr0.
-  -C                    Write unplaced contigs individually at the end of
-                        making a chr0
+  -C                    Write unplaced contigs individually instead of making a chr0
 ``` 
 
 RaGOO will try to be smart and not redo intermediate analysis already done in previous executions of the pipeline. For example, if the Minimap2 alignment files are already present from previous runs, RaGOO will not recreate them. However, RaGOO is not that smart, so be sure to remove any files that you want to replace. To be safe, one can just remove the entire output directory if a new analysis is desired (see "Output Files" below).

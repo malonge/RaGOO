@@ -525,7 +525,7 @@ if __name__ == "__main__":
     parser.add_argument("-f", metavar="10000", type=int, default=10000, help=argparse.SUPPRESS)
     parser.add_argument("-i", metavar="0.2", type=float, default=0.2, help="Minimum grouping confidence score needed to be localized.")
     parser.add_argument("-j", metavar="<skip.txt>", type=str, default="", help="List of contigs to automatically put in chr0.")
-    parser.add_argument("-C", action='store_true', default=False, help="Write unplaced contigs individually at the end of making a chr0")
+    parser.add_argument("-C", action='store_true', default=False, help="Write unplaced contigs individually instead of making a chr0")
 
     # Get the command line arguments
     args = parser.parse_args()
