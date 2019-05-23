@@ -2,10 +2,7 @@
 
 ### A tool to order and orient genome assembly contigs via Minimap2 alignments to a reference genome.
 
-
-**01/16/19 - Early users please update to the latest version (v1.01) as it has some bug fixes**
-
-**02/19/19 - Optimized pseudmolecule construction time in v1.02. I am getting a 20 fold speedup during the "Creating pseudomolecules" phase.**
+**05/23/19 - Version 1.1 Released!. Wiki with new feature descriptions coming soon!**
 
 ## Description
 
@@ -16,9 +13,10 @@ RaGOO is a tool for coalescing genome assembly contigs into pseudochromosomes vi
 1. Good performance. On a MacBook Pro using Arabidopsis data, pseudochromosome construction takes less than a minute and the whole pipeline with SV calling takes ~2 minutes.
 2. Intact ordering and orienting of contigs. 
 3. [Chimeric contig correction](https://github.com/malonge/RaGOO/wiki/Breaking-Chimeric-Contigs)
-4. [GFF lift-over](https://github.com/malonge/RaGOO/wiki/GFF-File-Lift-Over)
-5. [Structural variant calling with and integrated version of Assemblytics](https://github.com/malonge/RaGOO/wiki/Calling-Structural-Variants)
-6. Confidence scores associated with the grouping, localization, and orientation for each contig.
+4. Misassembly correction (wiki coming soon)
+5. [GFF lift-over](https://github.com/malonge/RaGOO/wiki/GFF-File-Lift-Over)
+6. [Structural variant calling with and integrated version of Assemblytics](https://github.com/malonge/RaGOO/wiki/Calling-Structural-Variants)
+7. Confidence scores associated with the grouping, localization, and orientation for each contig.
 
 ## Installation
 
@@ -44,10 +42,12 @@ $ python setup.py install
 
 ```
 usage: ragoo.py [-h] [-e <exclude.txt>] [-gff <annotations.gff>] [-m PATH]
-                [-b] [-t 3] [-g 100] [-s] [-i 0.2] [-j <skip.txt>]
+                [-b] [-R <reads.fasta>] [-T sr] [-t 3] [-g 100] [-s] [-i 0.2]
+                [-j <skip.txt>] [-C]
                 <contigs.fasta> <reference.fasta>
 
 order and orient contigs according to minimap2 alignments to a reference
+(v1.1)
 
 positional arguments:
   <contigs.fasta>       fasta file with contigs to be ordered and oriented
@@ -60,12 +60,20 @@ optional arguments:
                         lift-over gff features to chimera-broken contigs
   -m PATH               path to minimap2 executable
   -b                    Break chimeric contigs
+  -R <reads.fasta>      Turns on misassembly correction. Align provided reads
+                        to the contigs to aid misassembly correction. fastq or
+                        fasta allowed. Gzipped files allowed. Turns off '-b'.
+  -T sr                 Type of reads provided by '-R'. 'sr' and 'corr'
+                        accepted for short reads and error corrected long
+                        reads respectively.
   -t 3                  Number of threads when running minimap.
   -g 100                Gap size for padding in pseudomolecules.
   -s                    Call structural variants
   -i 0.2                Minimum grouping confidence score needed to be
                         localized.
   -j <skip.txt>         List of contigs to automatically put in chr0.
+  -C                    Write unplaced contigs individually at the end of
+                        making a chr0
 ``` 
 
 RaGOO will try to be smart and not redo intermediate analysis already done in previous executions of the pipeline. For example, if the Minimap2 alignment files are already present from previous runs, RaGOO will not recreate them. However, RaGOO is not that smart, so be sure to remove any files that you want to replace. To be safe, one can just remove the entire output directory if a new analysis is desired (see "Output Files" below).
@@ -86,11 +94,11 @@ All of the output will be in the "ragoo_output" directory. If breaking chimeric 
 
 ```
 ragoo_output/
-├── ragoo.fasta
-├── chimera_break/
-├── groupings/
-├── orderings/
-└── pm_alignments/
+├── ctg_alignments
+├── groupings
+├── orderings
+├── pm_alns
+└── ragoo.fasta
 ```
 
 #### ragoo.fasta
@@ -106,4 +114,7 @@ There is one file per chromosome listing the contigs assigned to that chromosome
 There is one file per chromosome showing the ordering, orientation (second column), location confidence scores (third column), and orientation confidence scores (fourth column).
 
 #### pm_alignments
-This directory contains all of the structural variant calling results. The final structural variants can be found in **assemblytics_out.Assemblytics_structural_variants.bed**. This bed file can be converted to VCF using [SURVIVOR](https://github.com/fritzsedlazeck/SURVIVOR), though the last two columns (overlap with gaps) must be removed first. The alignment used to generate these variant calls are also present in this directory in SAM and delta format (**pm_contigs_against_ref.sam** and **pm_contigs_against_ref.sam.delta**), and can be used as input for external tools. 
+This directory contains all of the structural variant calling results. The final structural variants can be found in **assemblytics_out.Assemblytics_structural_variants.bed**. This bed file can be converted to VCF using [SURVIVOR](https://github.com/fritzsedlazeck/SURVIVOR), though the last two columns (overlap with gaps) must be removed first. The alignment used to generate these variant calls are also present in this directory in SAM and delta format (**pm_contigs_against_ref.sam** and **pm_contigs_against_ref.sam.delta**), and can be used as input for external tools.
+
+#### ctg_alignments 
+Contains the results from misassembly correction. It will contain the corrected contigs in fasta format, as well as an updated gff file if provided.
