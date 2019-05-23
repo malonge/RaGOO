@@ -503,7 +503,7 @@ if __name__ == "__main__":
     import os
     import argparse
 
-    parser = argparse.ArgumentParser(description='order and orient contigs according to minimap2 alignments to a reference')
+    parser = argparse.ArgumentParser(description='order and orient contigs according to minimap2 alignments to a reference (v1.1)')
     parser.add_argument("contigs", metavar="<contigs.fasta>", type=str, help="fasta file with contigs to be ordered and oriented")
     parser.add_argument("reference", metavar="<reference.fasta>", type=str, help="reference fasta file")
     #parser.add_argument("-o", metavar="PATH", type=str, default="ragoo_output", help="output directory name")
