@@ -2,7 +2,12 @@
 
 ### A tool to order and orient genome assembly contigs via Minimap2 alignments to a reference genome.
 
-**05/23/19 - Version 1.1 Released!. Wiki with new feature descriptions coming soon!**
+## Announcements
+
+**05/24/19 - Version 1.1 Released!**
+
+The primary feature update is [misassembly correction](https://github.com/malonge/RaGOO/wiki/Misassembly-Correction), which utilizes read alignments
+to contigs to validate potential misassembly break points.
 
 ## Description
 
