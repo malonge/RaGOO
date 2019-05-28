@@ -17,11 +17,10 @@ RaGOO is a tool for coalescing genome assembly contigs into pseudochromosomes vi
 
 1. Good performance. On a MacBook Pro using Arabidopsis data, pseudochromosome construction takes less than a minute and the whole pipeline with SV calling takes ~2 minutes.
 2. Intact ordering and orienting of contigs. 
-3. [Chimeric contig correction](https://github.com/malonge/RaGOO/wiki/Breaking-Chimeric-Contigs)
-4. Misassembly correction (wiki coming soon)
-5. [GFF lift-over](https://github.com/malonge/RaGOO/wiki/GFF-File-Lift-Over)
-6. [Structural variant calling with and integrated version of Assemblytics](https://github.com/malonge/RaGOO/wiki/Calling-Structural-Variants)
-7. Confidence scores associated with the grouping, localization, and orientation for each contig.
+3. [Misassembly correction](https://github.com/malonge/RaGOO/wiki/Misassembly-Correction)
+4. [GFF lift-over](https://github.com/malonge/RaGOO/wiki/GFF-File-Lift-Over)
+5. [Structural variant calling with and integrated version of Assemblytics](https://github.com/malonge/RaGOO/wiki/Calling-Structural-Variants)
+6. Confidence scores associated with the grouping, localization, and orientation for each contig.
 
 ## Installation
 
