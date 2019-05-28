@@ -5,8 +5,9 @@ import numpy as np
 
 class ReadCoverage:
 
-    def __init__(self, in_paf):
+    def __init__(self, in_paf, in_is_noisy=False):
         self.paf = in_paf
+        self.is_noisy = in_is_noisy
         self.glob_mean = None
         self.glob_std = None
         self.coverage_map = dict()
@@ -80,6 +81,11 @@ class ReadCoverage:
         Populate self.coverage_map. This is a dictionary that associates each contig header with a list of alignment
         positions and their coverage levels.
         """
+        # Trim the alignments if working with noisy reads.
+        trim_len = 0
+        if self.is_noisy:
+            trim_len = 500
+
         # Associate with each contig header, a list of (query header, start), (query header, end)
         alns_pos = dict()
         with open(self.paf, 'r') as f:
@@ -88,12 +94,15 @@ class ReadCoverage:
 
                 # Only consider an alignment if at least 75% of the read aligned.
                 if abs((int(L1[3]) - int(L1[2])))/int(L1[1]) >= 0.75:
-                    if L1[5] in alns_pos:
-                        alns_pos[L1[5]].append((L1[0], int(L1[7])))
-                        alns_pos[L1[5]].append((L1[0], int(L1[8])))
-                    else:
-                        alns_pos[L1[5]] = [(L1[0], int(L1[7])), (L1[0], int(L1[8]))]
-                        self.ctg_lens[L1[5]] = int(L1[6])
+                    trim_start = int(L1[7]) + trim_len
+                    trim_end = int(L1[8]) - trim_len
+                    if trim_end > trim_start:
+                        if L1[5] in alns_pos:
+                            alns_pos[L1[5]].append((L1[0], trim_start))
+                            alns_pos[L1[5]].append((L1[0], trim_end))
+                        else:
+                            alns_pos[L1[5]] = [(L1[0], trim_start), (L1[0], trim_end)]
+                            self.ctg_lens[L1[5]] = int(L1[6])
 
         # Sort these coverage positions and get the coverage map
         for i in alns_pos:
