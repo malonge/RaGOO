@@ -477,7 +477,7 @@ def get_SVs(sv_min, sv_max, in_ref_file):
     os.chdir(current_path)
 
 
-def align_reads(m_path, num_threads, in_ctg_file, reads, tech='ont'):
+def align_reads(m_path, num_threads, in_ctg_file, reads, tech):
     current_path = os.getcwd()
     output_path = current_path + '/ctg_alignments'
     if not os.path.exists(output_path):
@@ -485,11 +485,12 @@ def align_reads(m_path, num_threads, in_ctg_file, reads, tech='ont'):
     os.chdir('ctg_alignments')
 
     if tech == 'sr':
-        cmd = '{} -x sr -t{} ../../{} ../../{} ' \
-              '> reads_against_ctg.paf 2> reads_against_ctg.paf.log'.format(m_path, num_threads, in_ctg_file, reads)
+        cmd = '{} -x sr -t{} ../../{} {} ' \
+              '> reads_against_ctg.paf 2> reads_against_ctg.paf.log'.format(m_path, num_threads, in_ctg_file, ' '.join(['../../' + i for i in reads]))
+
     elif tech == 'corr':
-        cmd = '{} -x asm10 -t{} ../../{} ../../{} ' \
-              '> reads_against_ctg.paf 2> reads_against_ctg.paf.log'.format(m_path, num_threads, in_ctg_file, reads)
+        cmd = '{} -x asm10 -t{} ../../{} {} ' \
+              '> reads_against_ctg.paf 2> reads_against_ctg.paf.log'.format(m_path, num_threads, in_ctg_file, ' '.join(['../../' + i for i in reads]))
     else:
         raise ValueError("Only 'sr' or 'corr' are accepted for read type.")
 
@@ -512,6 +513,7 @@ if __name__ == "__main__":
     parser.add_argument("-m", metavar="PATH", type=str, default="minimap2", help='path to minimap2 executable')
     parser.add_argument("-b", action='store_true', default=False, help="Break chimeric contigs")
     parser.add_argument("-R", metavar="<reads.fasta>", type=str, default="", help="Turns on misassembly correction. Align provided reads to the contigs to aid misassembly correction. fastq or fasta allowed. Gzipped files allowed. Turns off '-b'.")
+    parser.add_argument("-RF", metavar="<reads.fofn>", type=str, default="", help="Like '-R', but a file of multiple reads files (file of file names). All must be same type '-T'")
     parser.add_argument("-T", metavar="sr", type=str, default="", help="Type of reads provided by '-R'. 'sr' and 'corr' accepted for short reads and error corrected long reads respectively.")
     parser.add_argument("-p", metavar="5", type=int, default=5, help=argparse.SUPPRESS)
     parser.add_argument("-l", metavar="10000", type=int, default=10000, help=argparse.SUPPRESS)
@@ -549,16 +551,29 @@ if __name__ == "__main__":
     group_score_thresh = args.i
     skip_file = args.j
     corr_reads = args.R
+    corr_files = args.RF
     corr_reads_tech = args.T
     make_chr0 = not args.C
 
-    if corr_reads:
+    if corr_reads or corr_files:
+        if corr_reads and corr_files:
+            raise ValueError("Cannot use '-R' and '-RF' at the same time.")
+
+        # Make sure that if -R, -T has been specified
+        if not corr_reads_tech:
+            raise ValueError("'-T' must be provided when using -R.")
+
         log("Misassembly correction has been turned on. This automatically inactivates chimeric contig correction.")
         break_chimeras = False
 
-    # Make sure that if -R, -T has been specified
-    if corr_reads and not corr_reads_tech:
-        raise ValueError("'-T' must be provided when using -R.")
+        # Combine into the original variable to maintain the downstream variable names
+        # Regardless, 'corr_reads' will now be a list of query file names
+        if corr_files:
+            with open(corr_files, 'r') as f:
+                lfofn = [line.rstrip() for line in f]
+            corr_reads = lfofn
+        else:
+            corr_reads = [corr_reads]
 
     skip_ctg = []
     if skip_file:
