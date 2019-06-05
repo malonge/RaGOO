@@ -3,7 +3,7 @@ import sys
 import argparse
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Produce an AGP v2.0 file describing the ordering and orienting perforned by RaGOO.')
+    parser = argparse.ArgumentParser(description='Produce an AGP v2.0 file describing the ordering and orienting performed by RaGOO.')
     parser.add_argument("orderings", metavar="<orderings.fofn>", type=str, help="file of orderings files ($ls ragoo_output/orderings/* > orderings.fofn)")
     parser.add_argument("fai", metavar="<contigs.fasta.fai>", type=str, help="index file for contigs ($samtools faidx contigs.fasta)")
     parser.add_argument("gap_len", metavar="gap_size", type=int, help="Gap size used for pseudomolecule padding.")
