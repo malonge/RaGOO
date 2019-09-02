@@ -1,5 +1,8 @@
 # RaGOO
 
+[![DOI](https://zenodo.org/badge/119861637.svg)](https://zenodo.org/badge/latestdoi/119861637)
+
+
 ### A tool to order and orient genome assembly contigs via Minimap2 alignments to a reference genome.
 
 ## Announcements
