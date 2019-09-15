@@ -319,9 +319,14 @@ def create_pseudomolecules(in_contigs_file, in_unique_contigs, gap_size, chr0=Tr
     remaining_contig_headers = []
     all_seqs = OrderedDict()
     x = SeqReader('../' + in_contigs_file)
-    for header, seq in x.parse_fasta():
-        remaining_contig_headers.append(header.split(' ')[0])
-        all_seqs[header.split(' ')[0]] = seq
+    if in_contigs_file.endswith(".gz"):
+        for header, seq in x.parse_gzip_fasta():
+            remaining_contig_headers.append(header.split(' ')[0])
+            all_seqs[header.split(' ')[0]] = seq
+    else:
+        for header, seq in x.parse_fasta():
+            remaining_contig_headers.append(header.split(' ')[0])
+            all_seqs[header.split(' ')[0]] = seq
 
     # Get all reference chromosomes
     all_chroms = sorted(list(set([in_unique_contigs[i].ref_chrom for i in in_unique_contigs.keys()])))
