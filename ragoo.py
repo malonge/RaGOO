@@ -12,7 +12,7 @@ from ragoo_utilities.ContigAlignment import ContigAlignment
 from ragoo_utilities.ContigAlignment import UniqueContigAlignment
 from ragoo_utilities.ContigAlignment import LongestContigAlignment
 from ragoo_utilities.GFFReader import GFFReader
-from ragoo_utilities.utilities import run, log, reverse_complement, read_contigs
+from ragoo_utilities.utilities import run, log, reverse_complement, read_contigs, read_gz_contigs
 from ragoo_utilities.break_chimera import get_ref_parts, cluster_contig_alns, avoid_gff_intervals, update_gff, break_contig, get_intra_contigs
 
 
@@ -606,7 +606,10 @@ if __name__ == "__main__":
         alns = clean_alignments(alns, l=10000, in_exclude_file=exclude_file, uniq_anchor_filter=True)
         # Process contigs
         log('Getting contigs')
-        contigs_dict = read_contigs('../' + contigs_file)
+        if contigs_file.endswith(".gz"):
+            contigs_dict = read_gz_contigs('../' + contigs_file)
+        else:
+            contigs_dict = read_contigs('../' + contigs_file)
 
         log('Finding interchromosomally chimeric contigs')
         all_chimeras = dict()

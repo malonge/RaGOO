@@ -38,6 +38,14 @@ def read_contigs(in_file):
     return d
 
 
+def read_gz_contigs(in_file):
+    d = dict()
+    x = SeqReader(in_file)
+    for header, seq in x.parse_gzip_fasta():
+        d[header.replace('>', '').split(' ')[0]] = seq
+    return d
+
+
 def binary_search(query, numbers, left, right):
     """
     The contents of this method are either influenced by or directly copied from "Assemblytics_uniq_anchor.py"
