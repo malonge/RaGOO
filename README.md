@@ -1,5 +1,8 @@
 # RaGOO
 
+[![DOI](https://zenodo.org/badge/119861637.svg)](https://zenodo.org/badge/latestdoi/119861637)
+
+
 ### A tool to order and orient genome assembly contigs via Minimap2 alignments to a reference genome.
 
 ## Announcements
@@ -32,7 +35,7 @@ RaGOO should install on OSX and most standard flavors of Linux. RaGOO depends on
 2. numpy
 3. [Minimap2](https://github.com/lh3/minimap2)
 
-The first two packages will be installed automatically when installing RaGOO. Minimap2 is straightforward to install following the instructions on its website. Place the minimap2 executable in your path, or specify its location with the -m paramter (see below).
+The first two packages will be installed automatically when installing RaGOO. Minimap2 is straightforward to install following the instructions on its website. Place the minimap2 executable in your path, or specify its location with the -m parameter (see below).
 
 ### Installation
 
