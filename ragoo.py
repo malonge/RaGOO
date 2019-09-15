@@ -509,8 +509,8 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description='order and orient contigs according to minimap2 alignments to a reference (v1.1)')
-    parser.add_argument("contigs", metavar="<contigs.fasta>", type=str, help="fasta file with contigs to be ordered and oriented")
-    parser.add_argument("reference", metavar="<reference.fasta>", type=str, help="reference fasta file")
+    parser.add_argument("contigs", metavar="<contigs.fasta>", type=str, help="fasta file with contigs to be ordered and oriented (gzipped allowed)")
+    parser.add_argument("reference", metavar="<reference.fasta>", type=str, help="reference fasta file (gzipped allowed)")
     #parser.add_argument("-o", metavar="PATH", type=str, default="ragoo_output", help="output directory name")
     parser.add_argument("-e", metavar="<exclude.txt>", type=str, default="", help="single column text file of reference headers to ignore")
     parser.add_argument("-gff", metavar="<annotations.gff>", type=str, default='', help="lift-over gff features to chimera-broken contigs")

@@ -7,6 +7,10 @@
 
 ## Announcements
 
+**09/15/19 - gzip input allowed.**
+
+Contigs and reference fasta files may now be gzipped.
+
 **05/24/19 - Version 1.1 Released!**
 
 The primary feature update is [misassembly correction](https://github.com/malonge/RaGOO/wiki/Misassembly-Correction), which utilizes read alignments
