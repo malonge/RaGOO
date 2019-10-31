@@ -432,7 +432,7 @@ def align_pms(m_path, num_threads, in_reference_file):
         os.makedirs(output_path)
     os.chdir('pm_alignments')
 
-    cmd = '{} -ax asm5 --cs -t{} ../../{} {} ' \
+    cmd = '{} -ax asm5 --cs -t{} -I20G  ../../{} {} ' \
           '> pm_against_ref.sam 2> pm_contigs_against_ref.sam.log'.format(m_path, num_threads,
                                                                                         in_reference_file, '../ragoo.fasta')
     if not os.path.isfile('pm_against_ref.sam'):
@@ -518,6 +518,8 @@ if __name__ == "__main__":
     parser.add_argument("-b", action='store_true', default=False, help="Break chimeric contigs")
     parser.add_argument("-R", metavar="<reads.fasta>", type=str, default="", help="Turns on misassembly correction. Align provided reads to the contigs to aid misassembly correction. fastq or fasta allowed. Gzipped files allowed. Turns off '-b'.")
     parser.add_argument("-T", metavar="sr", type=str, default="", help="Type of reads provided by '-R'. 'sr' and 'corr' accepted for short reads and error corrected long reads respectively.")
+    parser.add_argument("-I", type=str, metavar="index_split", default="4G", help="Minimap2: split index for every ~NUM input bases [4G]")
+    parser.add_argument("--mini-extra", type=str, help="Extra flags to pass-through to MiniMap2.")
     parser.add_argument("-p", metavar="5", type=int, default=5, help=argparse.SUPPRESS)
     parser.add_argument("-l", metavar="10000", type=int, default=10000, help=argparse.SUPPRESS)
     parser.add_argument("-r", metavar="100000", type=int, default=100000, help=argparse.SUPPRESS)
@@ -578,8 +580,9 @@ if __name__ == "__main__":
     os.chdir(output_path)
 
     # Run minimap2
-    cmd = '{} -k19 -w19 -t{} ../{} ../{} ' \
-          '> contigs_against_ref.paf 2> contigs_against_ref.paf.log'.format(minimap_path, t, reference_file, contigs_file)
+    cmd = '{} -k19 -I {} {} -w19 -t{} ../{} ../{} ' \
+          '> contigs_against_ref.paf 2> contigs_against_ref.paf.log'.format(minimap_path, args.I, args.mini_extra,
+                                                                            t, reference_file, contigs_file)
 
     if not os.path.isfile('contigs_against_ref.paf'):
         run(cmd)

@@ -1,0 +1,9 @@
+name: ragoo
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - defaults::python==3.7
+  - conda-forge::numpy==1.17.2
+  - conda-forge::intervaltree==3.0.2
+  - bioconda::minimap2==2.17
