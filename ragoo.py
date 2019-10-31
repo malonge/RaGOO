@@ -133,7 +133,7 @@ def write_contig_clusters(unique_dict, thresh, skip_list):
     os.chdir(current_path)
 
 
-def clean_alignments(in_alns, l=10000, in_exclude_file='', uniq_anchor_filter=False, merge=False):
+def clean_alignments(in_alns, l=10000, in_exclude_file='', uniq_anchor_filter=False, merge=False, quality=0):
     # Exclude alignments to undesired reference headers and filter alignment lengths.
     exclude_list = []
     if in_exclude_file:
@@ -147,6 +147,8 @@ def clean_alignments(in_alns, l=10000, in_exclude_file='', uniq_anchor_filter=Fa
         in_alns[header].filter_lengths(l)
         if uniq_anchor_filter:
             in_alns[header].unique_anchor_filter()
+        if quality:
+            in_alns[header].filter_quality(quality)
 
         if merge:
             in_alns[header].merge_alns()
@@ -533,6 +535,8 @@ if __name__ == "__main__":
     parser.add_argument("-i", metavar="0.2", type=float, default=0.2, help="Minimum grouping confidence score needed to be localized.")
     parser.add_argument("-j", metavar="<skip.txt>", type=str, default="", help="List of contigs to automatically put in chr0.")
     parser.add_argument("-C", action='store_true', default=False, help="Write unplaced contigs individually instead of making a chr0")
+    parser.add_argument("-q", "--quality", default=0, type=int, metavar="min. mapping quality",
+                        help="Minimum mapping quality for Minimap2 alignments. Default: 0 (no filtering)")
 
     # Get the command line arguments
     args = parser.parse_args()
@@ -590,7 +594,7 @@ if __name__ == "__main__":
     # Read in the minimap2 alignments just generated
     log('Reading alignments')
     alns = read_paf_alignments('contigs_against_ref.paf')
-    alns = clean_alignments(alns, l=1000, in_exclude_file=exclude_file)
+    alns = clean_alignments(alns, l=1000, in_exclude_file=exclude_file, quality=args.quality)
 
     # Process the gff file
     if gff_file:

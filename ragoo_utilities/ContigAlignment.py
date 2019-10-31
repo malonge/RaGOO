@@ -173,6 +173,13 @@ class ContigAlignment:
 
         self.rearrange_alns(hits)
 
+    def filter_quality(self, q):
+        hits = []
+        for i in range(len(self.ref_headers)):
+            if self.mapqs[i] >= q:
+                hits.append(i)
+        self.rearrange_alns(hits)
+
     def unique_anchor_filter(self):
         """
         The contents of this method are either influenced by or directly copied from "Assemblytics_uniq_anchor.py"
