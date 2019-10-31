@@ -427,15 +427,15 @@ def align_breaks(break_type, m_path, in_reference_file, in_contigs_file, in_num_
     os.chdir(current_path)
 
 
-def align_pms(m_path, num_threads, in_reference_file):
+def align_pms(m_path, num_threads, in_reference_file, args):
     current_path = os.getcwd()
     output_path = current_path + '/pm_alignments'
     if not os.path.exists(output_path):
         os.makedirs(output_path)
     os.chdir('pm_alignments')
 
-    cmd = '{} -ax asm5 --cs -t{} -I20G  ../../{} {} ' \
-          '> pm_against_ref.sam 2> pm_contigs_against_ref.sam.log'.format(m_path, num_threads,
+    cmd = '{} -ax asm5 --cs -t{} -I {}  ../../{} {} ' \
+          '> pm_against_ref.sam 2> pm_contigs_against_ref.sam.log'.format(m_path, num_threads, args.I,
                                                                                         in_reference_file, '../ragoo.fasta')
     if not os.path.isfile('pm_against_ref.sam'):
         run(cmd)
@@ -758,7 +758,7 @@ if __name__ == "__main__":
 
     if call_svs:
         log('Aligning pseudomolecules to reference')
-        align_pms(minimap_path, t, reference_file)
+        align_pms(minimap_path, t, reference_file, args)
 
         log('Getting structural variants')
         get_SVs(a, f, reference_file)
