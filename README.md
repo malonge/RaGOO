@@ -18,7 +18,7 @@ to contigs to validate potential misassembly break points.
 
 ## Description
 
-Alonge M, Soyk S, Ramakrishnan S, Wang X, Goodwin S, Sedlazeck FJ, Lippman ZB, Schatz MC: [Fast and accurate reference-guided scaffolding of draft genomes](https://www.biorxiv.org/content/early/2019/01/13/519637). *bioRxiv* 2019.
+Alonge, Michael, et al. ["RaGOO: fast and accurate reference-guided scaffolding of draft genomes."](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1829-6) Genome biology 20.1 (2019): 1-17.
 
 RaGOO is a tool for coalescing genome assembly contigs into pseudochromosomes via minimap2 alignments to a closely related reference genome. The focus of this tool is on practicality and therefore has the following features:
 
