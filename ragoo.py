@@ -2,18 +2,19 @@
 from collections import defaultdict
 from collections import OrderedDict
 import copy
-
 from intervaltree import IntervalTree
-
 from ragoo_utilities.PAFReader import PAFReader
-from ragoo_utilities.SeqReader import SeqReader
 from ragoo_utilities.ReadCoverage import ReadCoverage
 from ragoo_utilities.ContigAlignment import ContigAlignment
 from ragoo_utilities.ContigAlignment import UniqueContigAlignment
 from ragoo_utilities.ContigAlignment import LongestContigAlignment
 from ragoo_utilities.GFFReader import GFFReader
-from ragoo_utilities.utilities import run, log, reverse_complement, read_contigs, read_gz_contigs
+import pysam
+from ragoo_utilities.utilities import run, log, reverse_complement
 from ragoo_utilities.break_chimera import get_ref_parts, cluster_contig_alns, avoid_gff_intervals, update_gff, break_contig, get_intra_contigs
+import os
+import argparse
+import textwrap
 
 
 def update_misasm_features(features, breaks, contig, ctg_len):
@@ -75,25 +76,25 @@ def write_misasm_broken_ctgs(contigs_file, breaks, out_prefix, in_gff=None, in_g
     os.chdir('ctg_alignments')
 
     if in_gff and in_gff_name:
-        with open(in_gff_name, 'w') as f:
+        with open(in_gff_name, 'w') as out_gff:
             for i in in_gff.keys():
                 for j in in_gff[i]:
-                    f.write(str(j) + '\n')
+                    out_gff.write(str(j) + '\n')
 
-    x = SeqReader("../../" + contigs_file)
-    f = open(out_prefix + ".misasm.break.fa", 'w')
-    for header, seq in x.parse_fasta():
-        header = header[1:]
-        if header not in breaks:
-            f.write(">" + header + "\n")
-            f.write(seq + "\n")
-        else:
-            # Break the contig
-            ctg_len = len(seq)
-            break_list = [0] + sorted(breaks[header]) + [ctg_len]
-            for i in range(len(break_list) - 1):
-                f.write(">" + header + "_misasm_break:" + str(break_list[i]) + "-" + str(break_list[i+1]) + "\n")
-                f.write(seq[break_list[i]:break_list[i+1]] + "\n")
+    x = pysam.FastaFile(os.path.join("..", "..", contigs_file))
+    with open(out_prefix + ".misasm.break.fa", 'w') as outfile:
+        for header in x.references:
+            seq = x.fetch(header)
+            if header not in breaks:
+                outfile.write(">" + header + "\n")
+                print(*textwrap.wrap(seq, width=60), sep="\n", file=outfile)
+            else:
+                # Break the contig
+                ctg_len = x.get_reference_length(header)
+                break_list = [0] + sorted(breaks[header]) + [ctg_len]
+                for i in range(len(break_list) - 1):
+                    outfile.write(">" + header + "_misasm_break:" + str(break_list[i]) + "-" + str(break_list[i+1]) + "\n")
+                    print(*textwrap.wrap(seq[break_list[i]:break_list[i+1]], width=60), sep="\n", file=outfile)
     os.chdir(current_path)
 
 
@@ -114,7 +115,7 @@ def write_contig_clusters(unique_dict, thresh, skip_list):
     # Get a list of all chromosomes
     all_chroms = set([unique_dict[i].ref_chrom for i in unique_dict.keys()])
     current_path = os.getcwd()
-    output_path = current_path + '/groupings'
+    output_path = os.path.join(current_path, 'groupings')
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
@@ -137,7 +138,7 @@ def clean_alignments(in_alns, l=10000, in_exclude_file='', uniq_anchor_filter=Fa
     # Exclude alignments to undesired reference headers and filter alignment lengths.
     exclude_list = []
     if in_exclude_file:
-        with open('../' + in_exclude_file) as f:
+        with open(os.path.join('..', in_exclude_file)) as f:
             for line in f:
                 exclude_list.append(line.rstrip().replace('>', '').split()[0])
 
@@ -224,7 +225,7 @@ def get_location_confidence(in_ctg_alns):
 
 def order_orient_contigs(in_unique_contigs, in_alns):
     current_path = os.getcwd()
-    output_path = current_path + '/orderings'
+    output_path = os.path.join(current_path, 'orderings')
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
@@ -281,7 +282,7 @@ def order_orient_contigs(in_unique_contigs, in_alns):
         # Intialize the list of start and end positions w.r.t the query
         ref_pos = []
 
-        groupings_file = 'groupings/' + this_chrom + '_contigs.txt'
+        groupings_file = os.path.join('groupings', this_chrom + '_contigs.txt')
         contigs_list = get_contigs_from_groupings(groupings_file)
 
         for i in range(len(contigs_list)):
@@ -294,7 +295,7 @@ def order_orient_contigs(in_unique_contigs, in_alns):
         # To do this, get the max and min alignments to this reference chromosome
         # Then within that region, what percent of bp are covered
 
-        with open('orderings/' + this_chrom + '_orderings.txt', 'w') as out_file:
+        with open(os.path.join('orderings',  this_chrom + '_orderings.txt'), 'w') as out_file:
             for i in final_order:
                 # Also have a scope issue here.
                 out_file.write(i + '\t' + final_orientations[i] + '\t' + str(location_confidence[i]) + '\t' + str(orientation_confidence[i]) + '\n')
@@ -318,80 +319,91 @@ def create_pseudomolecules(in_contigs_file, in_unique_contigs, gap_size, chr0=Tr
     :return:
     """
     # First, read all of the contigs into memory
-    remaining_contig_headers = []
+    # remaining_contig_headers = []
     all_seqs = OrderedDict()
-    x = SeqReader('../' + in_contigs_file)
-    if in_contigs_file.endswith(".gz"):
-        for header, seq in x.parse_gzip_fasta():
-            remaining_contig_headers.append(header.split(' ')[0])
-            all_seqs[header.split(' ')[0]] = seq
-    else:
-        for header, seq in x.parse_fasta():
-            remaining_contig_headers.append(header.split(' ')[0])
-            all_seqs[header.split(' ')[0]] = seq
+    x = pysam.FastaFile(os.path.join('..', in_contigs_file))
+    remaining_contig_headers = set(x.references)
 
     # Get all reference chromosomes
     all_chroms = sorted(list(set([in_unique_contigs[i].ref_chrom for i in in_unique_contigs.keys()])))
 
     # Iterate through each orderings file and store sequence in a dictionary
     all_pms = dict()
-    pad = ''.join('N' for i in range(gap_size))
-    for this_chrom in all_chroms:
-        orderings_file = 'orderings/' + this_chrom + '_orderings.txt'
-        orderings = get_orderings(orderings_file)
-        if orderings:
-            seq_list = []
-            for line in orderings:
-                # Mark that we have seen this contig
-                remaining_contig_headers.pop(remaining_contig_headers.index('>' + line[0]))
-                if line[1] == '+':
-                    seq_list.append(all_seqs['>' + line[0]])
-                else:
-                    assert line[1] == '-'
-                    seq_list.append(reverse_complement(all_seqs['>' + line[0]]))
-            all_pms[this_chrom] = pad.join(seq_list)
-            all_pms[this_chrom] += '\n'
+    pad = 'N' * gap_size
 
-    # Get unincorporated sequences and place them in Chr0
-    if remaining_contig_headers:
-        if chr0:
-            chr0_headers = []
-            chr0_seq_list = []
-            for header in remaining_contig_headers:
-                chr0_headers.append(header)
-                chr0_seq_list.append(all_seqs[header])
-            all_pms['Chr0'] = pad.join(chr0_seq_list)
-            all_pms['Chr0'] += '\n'
+    with open('ragoo.fasta', 'w') as outfile:
+        for this_chrom in all_chroms:
+            orderings_file = os.path.join('orderings', this_chrom + '_orderings.txt')
+            orderings = get_orderings(orderings_file)
+            curr_seq = []
+            curr_total = 0
+            if orderings:
+                print(">" + this_chrom + "_RaGOO", file=outfile)
+                for line in orderings:
+                    # Mark that we have seen this contig
+                    remaining_contig_headers.remove(line[0])
+                    if line[1] == '+':
+                        _ = x.fetch(line[0])
+                        curr_total += len(_)
+                        curr_seq.append(_)
+                    else:
+                        assert line[1] == '-'
+                        _ = x.fetch(line[0])
+                        curr_total += len(_)
+                        curr_seq.append(reverse_complement(_))
 
-            # Write out the list of chr0 headers
-            f_chr0_g = open('groupings/Chr0_contigs.txt', 'w')
-            f_chr0_o = open('orderings/Chr0_orderings.txt', 'w')
-            for i in chr0_headers:
-                f_chr0_g.write(i[1:] + "\t" + "0" + '\n')
-                f_chr0_o.write(i[1:] + '\t' + "+" + '\t' + "0" + '\t' + "0" + '\n')
-            f_chr0_g.close()
-            f_chr0_o.close()
-        else:
-            # Instead of making a chromosome 0, add the unplaced sequences as is.
-            for header in remaining_contig_headers:
-                all_pms[header[1:]] = all_seqs[header] + "\n"
-                f_chr0_g = open('groupings/' + header[1:] + '_contigs.txt', 'w')
-                f_chr0_o = open('orderings/' + header[1:] + '_orderings.txt', 'w')
-                f_chr0_g.write(header[1:] + "\t" + "0" + '\n')
-                f_chr0_o.write(header[1:] + '\t' + "+" + '\t' + "0" + '\t' + "0" + '\n')
+                    if curr_total >= 10 ** 7:  # Print out every 10Mbps
+                        wrapped = textwrap.wrap(pad.join(curr_seq), width=60)
+                        print(*wrapped[:-1], sep="\n", file=outfile)
+                        curr_seq = [wrapped[-1]]
+                        curr_total = len(wrapped[-1])
+
+                wrapped = textwrap.wrap(pad.join(curr_seq), width=60)
+                print(*wrapped, sep="\n", file=outfile)
+
+        # Get unincorporated sequences and place them in Chr0
+        if remaining_contig_headers:
+            if chr0:
+                curr_seq = []
+                curr_total = 0
+                chr0_headers = []
+                for header in remaining_contig_headers:
+                    _ = x.fetch(header)
+                    curr_total += len(_)
+                    curr_seq.append(_)
+                    chr0_headers.append(header)
+                    if curr_total >= 10 ** 7:  # Print out every 10Mbps
+                        wrapped = textwrap.wrap(pad.join(curr_seq), width=60)
+                        print(*wrapped[:-1], sep="\n", file=outfile)
+                        curr_seq = [wrapped[-1]]
+                        curr_total = len(wrapped[-1])
+
+                wrapped = textwrap.wrap(pad.join(curr_seq), width=60)
+                print(*wrapped, sep="\n", file=outfile)
+                # Write out the list of chr0 headers
+                f_chr0_g = open(os.path.join('groupings', 'Chr0_contigs.txt'), 'w')
+                f_chr0_o = open(os.path.join('orderings', 'Chr0_orderings.txt'), 'w')
+                for i in chr0_headers:
+                    f_chr0_g.write(i[1:] + "\t" + "0" + '\n')
+                    f_chr0_o.write(i[1:] + '\t' + "+" + '\t' + "0" + '\t' + "0" + '\n')
                 f_chr0_g.close()
                 f_chr0_o.close()
-
-    # Write the final sequences out to a file
-    with open('ragoo.fasta', 'w') as f:
-        for out_header in all_pms:
-            f.write(">" + out_header + "_RaGOO\n")
-            f.write(all_pms[out_header])
+            else:
+                # Instead of making a chromosome 0, add the unplaced sequences as is.
+                for header in remaining_contig_headers:
+                    print(">{}".format(header), file=outfile)
+                    print(*textwrap.wrap(x.fetch(header), width=60), sep="\n", file=outfile)
+                    f_chr0_g = open(os.path.join('groupings', header[1:] + '_contigs.txt'), 'w')
+                    f_chr0_o = open(os.path.join('orderings' + header[1:] + '_orderings.txt'), 'w')
+                    f_chr0_g.write(header[1:] + "\t" + "0" + '\n')
+                    f_chr0_o.write(header[1:] + '\t' + "+" + '\t' + "0" + '\t' + "0" + '\n')
+                    f_chr0_g.close()
+                    f_chr0_o.close()
 
 
 def write_broken_files(in_contigs, in_contigs_name, in_gff=None, in_gff_name=None):
     current_path = os.getcwd()
-    output_path = current_path + '/chimera_break'
+    output_path = os.path.join(current_path, 'chimera_break')
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
@@ -429,7 +441,7 @@ def align_breaks(break_type, m_path, in_reference_file, in_contigs_file, in_num_
 
 def align_pms(m_path, num_threads, in_reference_file, args):
     current_path = os.getcwd()
-    output_path = current_path + '/pm_alignments'
+    output_path = os.path.join(current_path, 'pm_alignments')
     if not os.path.exists(output_path):
         os.makedirs(output_path)
     os.chdir('pm_alignments')
@@ -486,7 +498,7 @@ def get_SVs(sv_min, sv_max, in_ref_file):
 
 def align_reads(m_path, num_threads, in_ctg_file, reads, tech='ont'):
     current_path = os.getcwd()
-    output_path = current_path + '/ctg_alignments'
+    output_path = os.path.join(current_path, 'ctg_alignments')
     if not os.path.exists(output_path):
         os.makedirs(output_path)
     os.chdir('ctg_alignments')
@@ -507,13 +519,11 @@ def align_reads(m_path, num_threads, in_ctg_file, reads, tech='ont'):
 
 
 if __name__ == "__main__":
-    import os
-    import argparse
 
     parser = argparse.ArgumentParser(description='order and orient contigs according to minimap2 alignments to a reference (v1.1)')
     parser.add_argument("contigs", metavar="<contigs.fasta>", type=str, help="fasta file with contigs to be ordered and oriented (gzipped allowed)")
     parser.add_argument("reference", metavar="<reference.fasta>", type=str, help="reference fasta file (gzipped allowed)")
-    #parser.add_argument("-o", metavar="PATH", type=str, default="ragoo_output", help="output directory name")
+    parser.add_argument("-o", metavar="PATH", type=str, default="ragoo_output", help="output directory name", dest="out")
     parser.add_argument("-e", metavar="<exclude.txt>", type=str, default="", help="single column text file of reference headers to ignore")
     parser.add_argument("-gff", metavar="<annotations.gff>", type=str, default='', help="lift-over gff features to chimera-broken contigs")
     parser.add_argument("-m", metavar="PATH", type=str, default="minimap2", help='path to minimap2 executable')
@@ -578,7 +588,7 @@ if __name__ == "__main__":
                 skip_ctg.append(line.rstrip())
 
     current_path = os.getcwd()
-    output_path = current_path + '/ragoo_output'
+    output_path = os.path.join(current_path, args.out)
     if not os.path.exists(output_path):
         os.makedirs(output_path)
     os.chdir(output_path)
@@ -600,7 +610,7 @@ if __name__ == "__main__":
     if gff_file:
         log('Getting gff features')
         features = defaultdict(list)
-        z = GFFReader('../' + gff_file)
+        z = GFFReader(os.path.join('..', gff_file))
         for i in z.parse_gff():
             features[i.seqname].append(i)
 
@@ -613,10 +623,7 @@ if __name__ == "__main__":
         alns = clean_alignments(alns, l=10000, in_exclude_file=exclude_file, uniq_anchor_filter=True)
         # Process contigs
         log('Getting contigs')
-        if contigs_file.endswith(".gz"):
-            contigs_dict = read_gz_contigs('../' + contigs_file)
-        else:
-            contigs_dict = read_contigs('../' + contigs_file)
+        contigs_dict = pysam.FastaFile(os.path.join('..', contigs_file))
 
         log('Finding interchromosomally chimeric contigs')
         all_chimeras = dict()
@@ -657,7 +664,7 @@ if __name__ == "__main__":
 
         # Now, use those new alignments for intrachromosomal chimeras
         log('Reading interchromosomal chimera broken alignments')
-        inter_alns = read_paf_alignments('chimera_break/inter_contigs_against_ref.paf')
+        inter_alns = read_paf_alignments(os.path.join('chimera_break', 'inter_contigs_against_ref.paf'))
         inter_alns = clean_alignments(inter_alns, l=1000, in_exclude_file=exclude_file)
 
         log('Finding intrachromosomally chimeric contigs')
@@ -694,9 +701,9 @@ if __name__ == "__main__":
 
         # Read in alignments of intrachromosomal chimeras and proceed with ordering and orientation
         log('Reading intrachromosomal chimera broken alignments')
-        alns = read_paf_alignments('chimera_break/intra_contigs_against_ref.paf')
+        alns = read_paf_alignments(os.path.join('chimera_break', 'intra_contigs_against_ref.paf'))
         alns = clean_alignments(alns, l=1000, in_exclude_file=exclude_file)
-        contigs_file = '/ragoo_output/chimera_break/' + out_intra_fasta
+        contigs_file = os.path.join(args.out, 'chimera_break', out_intra_fasta)
         log('The total number of interchromasomally chimeric contigs broken is %r' % total_inter_broken)
         log('The total number of intrachromasomally chimeric contigs broken is %r' % total_intra_broken)
 
@@ -706,7 +713,7 @@ if __name__ == "__main__":
         log('Aligning raw reads to contigs')
         align_reads(minimap_path, t, contigs_file, corr_reads, corr_reads_tech)
         log('Computing contig coverage')
-        cov_map = ReadCoverage('ctg_alignments/reads_against_ctg.paf')
+        cov_map = ReadCoverage(os.path.join('ctg_alignments', 'reads_against_ctg.paf'))
         alns = clean_alignments(alns, l=10000, in_exclude_file=exclude_file, uniq_anchor_filter=True, merge=True)
 
         # Get the initial candidate break points.
@@ -737,9 +744,10 @@ if __name__ == "__main__":
 
         # Align the broken contigs back to the reference
         align_misasm_broken(contigs_file[:contigs_file.rfind('.')])
-        alns = read_paf_alignments('ctg_alignments/contigs_brk_against_ref.paf')
+        alns = read_paf_alignments(os.path.join('ctg_alignments', 'contigs_brk_against_ref.paf'))
         alns = clean_alignments(alns, l=1000, in_exclude_file=exclude_file)
-        contigs_file = '/ragoo_output/ctg_alignments/' + contigs_file[:contigs_file.rfind('.')] + ".misasm.break.fa"
+        contigs_file = os.path.join(args.out, 'ctg_alignments',
+                                    contigs_file[:contigs_file.rfind('.')] + ".misasm.break.fa")
 
     # Assign each contig to a corresponding reference chromosome.
     log('Assigning contigs')

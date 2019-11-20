@@ -2,8 +2,6 @@ import time
 import subprocess
 import operator
 
-from ragoo_utilities.SeqReader import SeqReader
-
 """ A collection of various helper functions"""
 
 complements = str.maketrans("ACGTNURYSWKMBVDHacgtnuryswkmbvdh", "TGCANAYRSWMKVBHDtgcanayrswmkvbhd")
@@ -28,22 +26,6 @@ def run(cmnd):
 def log(message):
     """ Log messages to standard output. """
     print(time.ctime() + ' --- ' + message, flush=True)
-
-
-def read_contigs(in_file):
-    d = dict()
-    x = SeqReader(in_file)
-    for header, seq in x.parse_fasta():
-        d[header.replace('>', '').split(' ')[0]] = seq
-    return d
-
-
-def read_gz_contigs(in_file):
-    d = dict()
-    x = SeqReader(in_file)
-    for header, seq in x.parse_gzip_fasta():
-        d[header.replace('>', '').split(' ')[0]] = seq
-    return d
 
 
 def binary_search(query, numbers, left, right):

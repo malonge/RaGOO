@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 import re
-
 from intervaltree import IntervalTree
-
-from ragoo_utilities.SeqReader import SeqReader
+import pysam
 
 
 class BaseSequence(object):
@@ -23,25 +21,17 @@ class GapSequence(BaseSequence):
 def make_gaps_tree(in_file):
     # A dictionary to store an interval tree for each chromosome header.
     all_trees = dict()
-    x = SeqReader(in_file)
-    if in_file.endswith(".gz"):
-        for header, sequence in x.parse_gzip_fasta():
-            # Remove the greater than sign and only get first token if delimited by spaces
-            header = header[1:].split(' ')[0]
-            all_trees[header] = IntervalTree()
-            gap_sequence = GapSequence(sequence)
-            all_coordinates = [(m.start(0), m.end(0)) for m in gap_sequence.get_gap_coords()]
-            for i in all_coordinates:
-                all_trees[header][i[0]:i[1]] = i
-    else:
-        for header, sequence in x.parse_fasta():
-            # Remove the greater than sign and only get first token if delimited by spaces
-            header = header[1:].split(' ')[0]
-            all_trees[header] = IntervalTree()
-            gap_sequence = GapSequence(sequence)
-            all_coordinates = [(m.start(0), m.end(0)) for m in gap_sequence.get_gap_coords()]
-            for i in all_coordinates:
-                all_trees[header][i[0]:i[1]] = i
+    x = pysam.FastaFile(in_file)
+    for header in x.references:
+        sequence = x.fetch(header)
+        # Remove the greater than sign and only get first token if delimited by spaces
+        header = header[1:].split(' ')[0]
+        all_trees[header] = IntervalTree()
+        gap_sequence = GapSequence(sequence)
+        all_coordinates = [(m.start(0), m.end(0)) for m in gap_sequence.get_gap_coords()]
+        for i in all_coordinates:
+            all_trees[header][i[0]:i[1]] = i
+
     return all_trees
 
 
