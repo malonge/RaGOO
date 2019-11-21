@@ -327,7 +327,7 @@ def create_pseudomolecules(in_contigs_file, out_folder, in_ref, gap_size=100, ch
     """
     # First, read all of the contigs into memory
     # remaining_contig_headers = []
-    x = pysam.FastaFile(os.path.join('..', in_contigs_file))
+    x = pysam.FastaFile(in_contigs_file)
     y = pysam.FastaFile(in_ref)
     remaining_contig_headers = set(x.references)
 
@@ -561,8 +561,8 @@ if __name__ == "__main__":
 
     # Get the command line arguments
     args = parser.parse_args()
-    contigs_file = args.contigs
-    reference_file = args.reference
+    contigs_file = os.path.abspath(args.contigs)
+    reference_file = os.path.abspath(args.reference)
     #output_path = args.o
     exclude_file = args.e
     minimap_path = args.m
@@ -613,7 +613,7 @@ if __name__ == "__main__":
         run(cmd)
 
     # Read in the minimap2 alignments just generated
-    if not os.path.exists(os.path.join(args.out, "orderings", "done.txt")):
+    if not os.path.exists(os.path.join("orderings", "done.txt")):
         log('Reading alignments')
         alns = read_paf_alignments('contigs_against_ref.paf')
         alns = clean_alignments(alns, l=1000, in_exclude_file=exclude_file, quality=args.quality)
@@ -715,7 +715,7 @@ if __name__ == "__main__":
             log('Reading intrachromosomal chimera broken alignments')
             alns = read_paf_alignments(os.path.join('chimera_break', 'intra_contigs_against_ref.paf'))
             alns = clean_alignments(alns, l=1000, in_exclude_file=exclude_file)
-            contigs_file = os.path.join(args.out, 'chimera_break', out_intra_fasta)
+            contigs_file = os.path.abspath(os.path.join('chimera_break', out_intra_fasta))
             log('The total number of interchromasomally chimeric contigs broken is %r' % total_inter_broken)
             log('The total number of intrachromasomally chimeric contigs broken is %r' % total_intra_broken)
 
@@ -758,8 +758,8 @@ if __name__ == "__main__":
             align_misasm_broken(contigs_file[:contigs_file.rfind('.')])
             alns = read_paf_alignments(os.path.join('ctg_alignments', 'contigs_brk_against_ref.paf'))
             alns = clean_alignments(alns, l=1000, in_exclude_file=exclude_file)
-            contigs_file = os.path.join(args.out, 'ctg_alignments',
-                                        contigs_file[:contigs_file.rfind('.')] + ".misasm.break.fa")
+            contigs_file = os.path.abspath(os.path.join('ctg_alignments',
+                                        contigs_file[:contigs_file.rfind('.')] + ".misasm.break.fa"))
 
         # Assign each contig to a corresponding reference chromosome.
         log('Assigning contigs')
@@ -775,7 +775,7 @@ if __name__ == "__main__":
 
     log('Creating pseudomolecules')
     # File of the contigs, dictionary
-    create_pseudomolecules(contigs_file, os.path.abspath(args.out), os.path.abspath(reference_file),
+    create_pseudomolecules(os.path.abspath(contigs_file), os.path.abspath(args.out), os.path.abspath(reference_file),
                            gap_size=g, chr0=make_chr0)
 
     if call_svs:
