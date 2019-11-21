@@ -131,6 +131,10 @@ def write_contig_clusters(unique_dict, thresh, skip_list):
                 file_name = str(this_chr) + '_contigs.txt'
                 with open(file_name, 'a') as f:
                     f.write(i + '\t' + str(this_confidence) + '\n')
+
+    with open("done.txt", "w"):
+        pass
+
     os.chdir(current_path)
 
 
@@ -300,6 +304,9 @@ def order_orient_contigs(in_unique_contigs, in_alns):
                 # Also have a scope issue here.
                 out_file.write(i + '\t' + final_orientations[i] + '\t' + str(location_confidence[i]) + '\t' + str(orientation_confidence[i]) + '\n')
 
+    with open(os.path.join('orderings', "done.txt")) as out_file:
+        pass
+
 
 def get_orderings(in_orderings_file):
     all_orderings = []
@@ -310,7 +317,7 @@ def get_orderings(in_orderings_file):
     return all_orderings
 
 
-def create_pseudomolecules(in_contigs_file, in_unique_contigs, gap_size, chr0=True):
+def create_pseudomolecules(in_contigs_file, out_folder, in_ref, gap_size=100, chr0=True):
     """
     Need to make a translation table for easy lift-over.
     :param in_contigs_file:
@@ -320,15 +327,19 @@ def create_pseudomolecules(in_contigs_file, in_unique_contigs, gap_size, chr0=Tr
     """
     # First, read all of the contigs into memory
     # remaining_contig_headers = []
-    all_seqs = OrderedDict()
     x = pysam.FastaFile(os.path.join('..', in_contigs_file))
+    y = pysam.FastaFile(in_ref)
     remaining_contig_headers = set(x.references)
 
     # Get all reference chromosomes
-    all_chroms = sorted(list(set([in_unique_contigs[i].ref_chrom for i in in_unique_contigs.keys()])))
+    # all_chroms = sorted(list(set([in_unique_contigs[i].ref_chrom for i in in_unique_contigs.keys()])))
 
     # Iterate through each orderings file and store sequence in a dictionary
-    all_pms = dict()
+    all_chroms = sorted([os.path.basename(_).replace("_orderings.txt", "") for _ in
+                         os.listdir(os.path.join(out_folder, "orderings")) if
+                         os.path.basename(_).replace("_orderings.txt", "") in y.references])
+    os.chdir(out_folder)
+
     pad = 'N' * gap_size
 
     with open('ragoo.fasta', 'w') as outfile:
@@ -602,167 +613,170 @@ if __name__ == "__main__":
         run(cmd)
 
     # Read in the minimap2 alignments just generated
-    log('Reading alignments')
-    alns = read_paf_alignments('contigs_against_ref.paf')
-    alns = clean_alignments(alns, l=1000, in_exclude_file=exclude_file, quality=args.quality)
+    if not os.path.exists(os.path.join(args.out, "orderings", "done.txt")):
+        log('Reading alignments')
+        alns = read_paf_alignments('contigs_against_ref.paf')
+        alns = clean_alignments(alns, l=1000, in_exclude_file=exclude_file, quality=args.quality)
 
-    # Process the gff file
-    if gff_file:
-        log('Getting gff features')
-        features = defaultdict(list)
-        z = GFFReader(os.path.join('..', gff_file))
-        for i in z.parse_gff():
-            features[i.seqname].append(i)
-
-    # Break chimeras if desired
-    if break_chimeras:
-        # Record how many contigs are broken
-        total_inter_broken = 0
-        total_intra_broken = 0
-
-        alns = clean_alignments(alns, l=10000, in_exclude_file=exclude_file, uniq_anchor_filter=True)
-        # Process contigs
-        log('Getting contigs')
-        contigs_dict = pysam.FastaFile(os.path.join('..', contigs_file))
-
-        log('Finding interchromosomally chimeric contigs')
-        all_chimeras = dict()
-        for i in alns.keys():
-            ref_parts = get_ref_parts(alns[i], min_len, min_break_pct, min_range)
-            if len(ref_parts) > 1:
-                all_chimeras[i] = ref_parts
-
-        log('Finding break points and breaking interchromosomally chimeric contigs')
-        break_intervals = dict()
-        for i in all_chimeras.keys():
-            break_intervals[i] = cluster_contig_alns(i, alns, all_chimeras[i], min_len)
-
-            # If its just going to break it into the same thing, skip it.
-            if len(break_intervals[i]) <= 1:
-                continue
-
-            if gff_file:
-                # If desired, ensure that breakpoints don't disrupt any gff intervals
-                break_intervals[i] = avoid_gff_intervals(break_intervals[i], features[i])
-                features = update_gff(features, break_intervals[i], i)
-
-            # Break contigs according to the final break points
-            contigs_dict = break_contig(contigs_dict, i, break_intervals[i])
-            total_inter_broken += 1
-
-        # Next, need to re-align before finding intrachromosomal chimeras
-        # First, write out the interchromosomal chimera broken fasta
-        out_inter_fasta = contigs_file[:contigs_file.rfind('.')] + '.inter.chimera.broken.fa'
+        # Process the gff file
         if gff_file:
-            out_gff = gff_file[:gff_file.rfind('.')] + '.inter.chimera_broken.gff'
-            write_broken_files(contigs_dict, out_inter_fasta, features, out_gff)
-        else:
-            write_broken_files(contigs_dict, out_inter_fasta)
+            log('Getting gff features')
+            features = defaultdict(list)
+            z = GFFReader(os.path.join('..', gff_file))
+            for i in z.parse_gff():
+                features[i.seqname].append(i)
 
-        # Next, realign the chimera broken contigs
-        align_breaks('inter', minimap_path, reference_file, out_inter_fasta, t)
+        # Break chimeras if desired
+        if break_chimeras:
+            # Record how many contigs are broken
+            total_inter_broken = 0
+            total_intra_broken = 0
 
-        # Now, use those new alignments for intrachromosomal chimeras
-        log('Reading interchromosomal chimera broken alignments')
-        inter_alns = read_paf_alignments(os.path.join('chimera_break', 'inter_contigs_against_ref.paf'))
-        inter_alns = clean_alignments(inter_alns, l=1000, in_exclude_file=exclude_file)
+            alns = clean_alignments(alns, l=10000, in_exclude_file=exclude_file, uniq_anchor_filter=True)
+            # Process contigs
+            log('Getting contigs')
+            contigs_dict = pysam.FastaFile(os.path.join('..', contigs_file))
 
-        log('Finding intrachromosomally chimeric contigs')
-        # Find intrachromosomally chimeric contigs
-        for i in inter_alns.keys():
-            intra = get_intra_contigs(inter_alns[i], 15000, intra_wrt_ref_min, intra_wrt_ctg_min)
-            if intra:
-                if gff_file:
-                    intra_break_intervals = avoid_gff_intervals(intra[1], features[intra[0]])
-                else:
-                    intra_break_intervals = intra[1]
-                # Check if the avoidance of gff intervals pushed the break point to the end of the contig.
-                if intra_break_intervals[-1][0] == intra_break_intervals[-1][1]:
+            log('Finding interchromosomally chimeric contigs')
+            all_chimeras = dict()
+            for i in alns.keys():
+                ref_parts = get_ref_parts(alns[i], min_len, min_break_pct, min_range)
+                if len(ref_parts) > 1:
+                    all_chimeras[i] = ref_parts
+
+            log('Finding break points and breaking interchromosomally chimeric contigs')
+            break_intervals = dict()
+            for i in all_chimeras.keys():
+                break_intervals[i] = cluster_contig_alns(i, alns, all_chimeras[i], min_len)
+
+                # If its just going to break it into the same thing, skip it.
+                if len(break_intervals[i]) <= 1:
                     continue
 
-                # break the contigs and update features if desired
-                contigs_dict = break_contig(contigs_dict, intra[0], intra_break_intervals)
-                total_intra_broken += 1
-
                 if gff_file:
-                    features = update_gff(features, intra_break_intervals, intra[0])
+                    # If desired, ensure that breakpoints don't disrupt any gff intervals
+                    break_intervals[i] = avoid_gff_intervals(break_intervals[i], features[i])
+                    features = update_gff(features, break_intervals[i], i)
 
-        # Write out the intrachromosomal information
-        out_intra_fasta = contigs_file[:contigs_file.rfind('.')] + '.intra.chimera.broken.fa'
-        if gff_file:
-            out_intra_gff = gff_file[:gff_file.rfind('.')] + '.intra.chimera_broken.gff'
-            write_broken_files(contigs_dict, out_intra_fasta, features, out_intra_gff)
-        else:
-            write_broken_files(contigs_dict, out_intra_fasta)
+                # Break contigs according to the final break points
+                contigs_dict = break_contig(contigs_dict, i, break_intervals[i])
+                total_inter_broken += 1
 
-        # Re align the contigs
-        # Next, realign the chimera broken contigs
-        align_breaks('intra', minimap_path, reference_file, out_intra_fasta, t)
-
-        # Read in alignments of intrachromosomal chimeras and proceed with ordering and orientation
-        log('Reading intrachromosomal chimera broken alignments')
-        alns = read_paf_alignments(os.path.join('chimera_break', 'intra_contigs_against_ref.paf'))
-        alns = clean_alignments(alns, l=1000, in_exclude_file=exclude_file)
-        contigs_file = os.path.join(args.out, 'chimera_break', out_intra_fasta)
-        log('The total number of interchromasomally chimeric contigs broken is %r' % total_inter_broken)
-        log('The total number of intrachromasomally chimeric contigs broken is %r' % total_intra_broken)
-
-    # Check if misassembly correction is turned on. This is mutually exclusive with chimeric contig correction
-    if corr_reads:
-        # Align the raw reads to the assembly.
-        log('Aligning raw reads to contigs')
-        align_reads(minimap_path, t, contigs_file, corr_reads, corr_reads_tech)
-        log('Computing contig coverage')
-        cov_map = ReadCoverage(os.path.join('ctg_alignments', 'reads_against_ctg.paf'))
-        alns = clean_alignments(alns, l=10000, in_exclude_file=exclude_file, uniq_anchor_filter=True, merge=True)
-
-        # Get the initial candidate break points.
-        candidate_breaks = dict()
-        for i in alns:
-            candidates = alns[i].get_break_candidates()
-            if candidates:
-                candidate_breaks[i] = candidates
-
-        # Validate each breakpoint by checking for excessively high or low coverage
-        # Also, if a gff is provided, check to ensure that we don't break within a gff feature interval
-        val_candidate_breaks = dict()
-        for i in candidate_breaks:
-            candidates = cov_map.check_break_cov(i, candidate_breaks[i])
+            # Next, need to re-align before finding intrachromosomal chimeras
+            # First, write out the interchromosomal chimera broken fasta
+            out_inter_fasta = contigs_file[:contigs_file.rfind('.')] + '.inter.chimera.broken.fa'
             if gff_file:
-                candidates = remove_gff_breaks(features[i], candidates)
-            if candidates:
-                val_candidate_breaks[i] = list(set(candidates))
+                out_gff = gff_file[:gff_file.rfind('.')] + '.inter.chimera_broken.gff'
+                write_broken_files(contigs_dict, out_inter_fasta, features, out_gff)
+            else:
+                write_broken_files(contigs_dict, out_inter_fasta)
+
+            # Next, realign the chimera broken contigs
+            align_breaks('inter', minimap_path, reference_file, out_inter_fasta, t)
+
+            # Now, use those new alignments for intrachromosomal chimeras
+            log('Reading interchromosomal chimera broken alignments')
+            inter_alns = read_paf_alignments(os.path.join('chimera_break', 'inter_contigs_against_ref.paf'))
+            inter_alns = clean_alignments(inter_alns, l=1000, in_exclude_file=exclude_file)
+
+            log('Finding intrachromosomally chimeric contigs')
+            # Find intrachromosomally chimeric contigs
+            for i in inter_alns.keys():
+                intra = get_intra_contigs(inter_alns[i], 15000, intra_wrt_ref_min, intra_wrt_ctg_min)
+                if intra:
+                    if gff_file:
+                        intra_break_intervals = avoid_gff_intervals(intra[1], features[intra[0]])
+                    else:
+                        intra_break_intervals = intra[1]
+                    # Check if the avoidance of gff intervals pushed the break point to the end of the contig.
+                    if intra_break_intervals[-1][0] == intra_break_intervals[-1][1]:
+                        continue
+
+                    # break the contigs and update features if desired
+                    contigs_dict = break_contig(contigs_dict, intra[0], intra_break_intervals)
+                    total_intra_broken += 1
+
+                    if gff_file:
+                        features = update_gff(features, intra_break_intervals, intra[0])
+
+            # Write out the intrachromosomal information
+            out_intra_fasta = contigs_file[:contigs_file.rfind('.')] + '.intra.chimera.broken.fa'
+            if gff_file:
+                out_intra_gff = gff_file[:gff_file.rfind('.')] + '.intra.chimera_broken.gff'
+                write_broken_files(contigs_dict, out_intra_fasta, features, out_intra_gff)
+            else:
+                write_broken_files(contigs_dict, out_intra_fasta)
+
+            # Re align the contigs
+            # Next, realign the chimera broken contigs
+            align_breaks('intra', minimap_path, reference_file, out_intra_fasta, t)
+
+            # Read in alignments of intrachromosomal chimeras and proceed with ordering and orientation
+            log('Reading intrachromosomal chimera broken alignments')
+            alns = read_paf_alignments(os.path.join('chimera_break', 'intra_contigs_against_ref.paf'))
+            alns = clean_alignments(alns, l=1000, in_exclude_file=exclude_file)
+            contigs_file = os.path.join(args.out, 'chimera_break', out_intra_fasta)
+            log('The total number of interchromasomally chimeric contigs broken is %r' % total_inter_broken)
+            log('The total number of intrachromasomally chimeric contigs broken is %r' % total_intra_broken)
+
+        # Check if misassembly correction is turned on. This is mutually exclusive with chimeric contig correction
+        if corr_reads:
+            # Align the raw reads to the assembly.
+            log('Aligning raw reads to contigs')
+            align_reads(minimap_path, t, contigs_file, corr_reads, corr_reads_tech)
+            log('Computing contig coverage')
+            cov_map = ReadCoverage(os.path.join('ctg_alignments', 'reads_against_ctg.paf'))
+            alns = clean_alignments(alns, l=10000, in_exclude_file=exclude_file, uniq_anchor_filter=True, merge=True)
+
+            # Get the initial candidate break points.
+            candidate_breaks = dict()
+            for i in alns:
+                candidates = alns[i].get_break_candidates()
+                if candidates:
+                    candidate_breaks[i] = candidates
+
+            # Validate each breakpoint by checking for excessively high or low coverage
+            # Also, if a gff is provided, check to ensure that we don't break within a gff feature interval
+            val_candidate_breaks = dict()
+            for i in candidate_breaks:
+                candidates = cov_map.check_break_cov(i, candidate_breaks[i])
                 if gff_file:
-                    features = update_misasm_features(features, val_candidate_breaks[i], i, cov_map.ctg_lens[i])
+                    candidates = remove_gff_breaks(features[i], candidates)
+                if candidates:
+                    val_candidate_breaks[i] = list(set(candidates))
+                    if gff_file:
+                        features = update_misasm_features(features, val_candidate_breaks[i], i, cov_map.ctg_lens[i])
 
-        # Break the contigs
-        if gff_file:
-            out_misasm_gff = gff_file[:gff_file.rfind('.')] + '.misasm.broken.gff'
-            write_misasm_broken_ctgs(contigs_file, val_candidate_breaks, contigs_file[:contigs_file.rfind('.')], in_gff=features, in_gff_name=out_misasm_gff)
-        else:
-            write_misasm_broken_ctgs(contigs_file, val_candidate_breaks, contigs_file[:contigs_file.rfind('.')])
+            # Break the contigs
+            if gff_file:
+                out_misasm_gff = gff_file[:gff_file.rfind('.')] + '.misasm.broken.gff'
+                write_misasm_broken_ctgs(contigs_file, val_candidate_breaks, contigs_file[:contigs_file.rfind('.')], in_gff=features, in_gff_name=out_misasm_gff)
+            else:
+                write_misasm_broken_ctgs(contigs_file, val_candidate_breaks, contigs_file[:contigs_file.rfind('.')])
 
-        # Align the broken contigs back to the reference
-        align_misasm_broken(contigs_file[:contigs_file.rfind('.')])
-        alns = read_paf_alignments(os.path.join('ctg_alignments', 'contigs_brk_against_ref.paf'))
-        alns = clean_alignments(alns, l=1000, in_exclude_file=exclude_file)
-        contigs_file = os.path.join(args.out, 'ctg_alignments',
-                                    contigs_file[:contigs_file.rfind('.')] + ".misasm.break.fa")
+            # Align the broken contigs back to the reference
+            align_misasm_broken(contigs_file[:contigs_file.rfind('.')])
+            alns = read_paf_alignments(os.path.join('ctg_alignments', 'contigs_brk_against_ref.paf'))
+            alns = clean_alignments(alns, l=1000, in_exclude_file=exclude_file)
+            contigs_file = os.path.join(args.out, 'ctg_alignments',
+                                        contigs_file[:contigs_file.rfind('.')] + ".misasm.break.fa")
 
-    # Assign each contig to a corresponding reference chromosome.
-    log('Assigning contigs')
-    all_unique_contigs = dict()
-    for i in alns.keys():
-        all_unique_contigs[i] = UniqueContigAlignment(alns[i])
+        # Assign each contig to a corresponding reference chromosome.
+        log('Assigning contigs')
+        all_unique_contigs = dict()
+        for i in alns.keys():
+            all_unique_contigs[i] = UniqueContigAlignment(alns[i])
 
-    # Add to this the list of headers that did not make it
-    write_contig_clusters(all_unique_contigs, group_score_thresh, skip_ctg)
+        # Add to this the list of headers that did not make it
+        write_contig_clusters(all_unique_contigs, group_score_thresh, skip_ctg)
 
-    log('Ordering and orienting contigs')
-    order_orient_contigs(all_unique_contigs, alns)
+        log('Ordering and orienting contigs')
+        order_orient_contigs(all_unique_contigs, alns)
 
     log('Creating pseudomolecules')
-    create_pseudomolecules(contigs_file, all_unique_contigs, g, make_chr0)
+    # File of the contigs, dictionary
+    create_pseudomolecules(contigs_file, os.path.abspath(args.out), os.path.abspath(reference_file),
+                           gap_size=g, chr0=make_chr0)
 
     if call_svs:
         log('Aligning pseudomolecules to reference')
