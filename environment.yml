@@ -8,3 +8,4 @@ dependencies:
   - conda-forge::intervaltree==3.0.2
   - bioconda::minimap2==2.17
   - bioconda::pysam=0.15.3
+  - bioconda::samtools=1.9
