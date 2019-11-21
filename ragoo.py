@@ -588,8 +588,8 @@ if __name__ == "__main__":
     a = args.a
     f = args.f
     group_score_thresh = args.i
-    skip_file = os.path.abspath(args.j)
-    corr_reads = os.path.abspath(args.R)
+    skip_file = args.j
+    corr_reads = args.R
     corr_reads_tech = args.T
     make_chr0 = not args.C
 
@@ -601,8 +601,10 @@ if __name__ == "__main__":
     if corr_reads and not corr_reads_tech:
         raise ValueError("'-T' must be provided when using -R.")
 
+    corr_reads = os.path.abspath(corr_reads)
     skip_ctg = []
     if skip_file:
+        skip_file = os.path.abspath(skip_file)
         with open(skip_file) as f:
             for line in f:
                 skip_ctg.append(line.rstrip())
