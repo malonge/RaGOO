@@ -14,7 +14,7 @@ from ragoo_utilities.utilities import run, log, reverse_complement
 from ragoo_utilities.break_chimera import get_ref_parts, cluster_contig_alns, avoid_gff_intervals, update_gff, break_contig, get_intra_contigs
 import os
 import argparse
-import textwrap
+import re
 
 
 def update_misasm_features(features, breaks, contig, ctg_len):
@@ -87,14 +87,14 @@ def write_misasm_broken_ctgs(contigs_file, breaks, out_prefix, in_gff=None, in_g
             seq = x.fetch(header)
             if header not in breaks:
                 outfile.write(">" + header + "\n")
-                print(*textwrap.wrap(seq, width=60), sep="\n", file=outfile)
+                print(*re.findall(".{1,60}", seq), sep="\n", file=outfile)
             else:
                 # Break the contig
                 ctg_len = x.get_reference_length(header)
                 break_list = [0] + sorted(breaks[header]) + [ctg_len]
                 for i in range(len(break_list) - 1):
                     outfile.write(">" + header + "_misasm_break:" + str(break_list[i]) + "-" + str(break_list[i+1]) + "\n")
-                    print(*textwrap.wrap(seq[break_list[i]:break_list[i+1]], width=60), sep="\n", file=outfile)
+                    print(*re.findall(".{1,60}", seq[break_list[i]:break_list[i+1]]), sep="\n", file=outfile)
     os.chdir(current_path)
 
 
@@ -335,10 +335,10 @@ def create_pseudomolecules(in_contigs_file, out_folder, in_ref, gap_size=100, ch
     # all_chroms = sorted(list(set([in_unique_contigs[i].ref_chrom for i in in_unique_contigs.keys()])))
 
     # Iterate through each orderings file and store sequence in a dictionary
-    all_chroms = sorted([os.path.basename(_).replace("_orderings.txt", "") for _ in
-                         os.listdir(os.path.join(out_folder, "orderings")) if
-                         os.path.basename(_).replace("_orderings.txt", "") in y.references])
     os.chdir(out_folder)
+    all_chroms = sorted([os.path.basename(_).replace("_orderings.txt", "") for _ in
+                         os.listdir(os.path.join("orderings")) if
+                         os.path.basename(_).replace("_orderings.txt", "") in y.references])
 
     pad = 'N' * gap_size
 
@@ -353,23 +353,21 @@ def create_pseudomolecules(in_contigs_file, out_folder, in_ref, gap_size=100, ch
                 for line in orderings:
                     # Mark that we have seen this contig
                     remaining_contig_headers.remove(line[0])
+                    _ = x.fetch(line[0])
+                    curr_total += x.get_reference_length(line[0])
                     if line[1] == '+':
-                        _ = x.fetch(line[0])
-                        curr_total += len(_)
                         curr_seq.append(_)
                     else:
                         assert line[1] == '-'
-                        _ = x.fetch(line[0])
-                        curr_total += len(_)
                         curr_seq.append(reverse_complement(_))
 
                     if curr_total >= 10 ** 7:  # Print out every 10Mbps
-                        wrapped = textwrap.wrap(pad.join(curr_seq), width=60)
+                        wrapped = re.findall(".{1,60}", pad.join(curr_seq))
                         print(*wrapped[:-1], sep="\n", file=outfile)
                         curr_seq = [wrapped[-1]]
                         curr_total = len(wrapped[-1])
 
-                wrapped = textwrap.wrap(pad.join(curr_seq), width=60)
+                wrapped = re.findall(".{1,60}", pad.join(curr_seq))
                 print(*wrapped, sep="\n", file=outfile)
 
         # Get unincorporated sequences and place them in Chr0
@@ -380,16 +378,16 @@ def create_pseudomolecules(in_contigs_file, out_folder, in_ref, gap_size=100, ch
                 chr0_headers = []
                 for header in remaining_contig_headers:
                     _ = x.fetch(header)
-                    curr_total += len(_)
+                    curr_total += x.get_reference_length(header)
                     curr_seq.append(_)
                     chr0_headers.append(header)
                     if curr_total >= 10 ** 7:  # Print out every 10Mbps
-                        wrapped = textwrap.wrap(pad.join(curr_seq), width=60)
+                        wrapped = re.findall(".{1,60}", pad.join(curr_seq))
                         print(*wrapped[:-1], sep="\n", file=outfile)
                         curr_seq = [wrapped[-1]]
                         curr_total = len(wrapped[-1])
 
-                wrapped = textwrap.wrap(pad.join(curr_seq), width=60)
+                wrapped = re.findall(".{1,60}", pad.join(curr_seq))
                 print(*wrapped, sep="\n", file=outfile)
                 # Write out the list of chr0 headers
                 f_chr0_g = open(os.path.join('groupings', 'Chr0_contigs.txt'), 'w')
@@ -403,7 +401,7 @@ def create_pseudomolecules(in_contigs_file, out_folder, in_ref, gap_size=100, ch
                 # Instead of making a chromosome 0, add the unplaced sequences as is.
                 for header in remaining_contig_headers:
                     print(">{}".format(header), file=outfile)
-                    print(*textwrap.wrap(x.fetch(header), width=60), sep="\n", file=outfile)
+                    print(*re.findall(".{1,60}", pad.join(x.fetch(header))), sep="\n", file=outfile)
                     f_chr0_g = open(os.path.join('groupings', header[1:] + '_contigs.txt'), 'w')
                     f_chr0_o = open(os.path.join('orderings' + header[1:] + '_orderings.txt'), 'w')
                     f_chr0_g.write(header[1:] + "\t" + "0" + '\n')
@@ -775,8 +773,8 @@ if __name__ == "__main__":
 
     log('Creating pseudomolecules')
     # File of the contigs, dictionary
-    create_pseudomolecules(os.path.abspath(contigs_file), os.path.abspath(args.out), os.path.abspath(reference_file),
-                           gap_size=g, chr0=make_chr0)
+    create_pseudomolecules(os.path.abspath(contigs_file), os.path.realpath(os.getcwd()),
+                           os.path.abspath(reference_file), gap_size=g, chr0=make_chr0)
 
     if call_svs:
         log('Aligning pseudomolecules to reference')
