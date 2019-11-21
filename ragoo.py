@@ -377,6 +377,7 @@ def create_pseudomolecules(in_contigs_file, out_folder, in_ref, gap_size=100, ch
                 curr_seq = []
                 curr_total = 0
                 chr0_headers = []
+                print(">Chr0_RaGOO", file=outfile)
                 for header in remaining_contig_headers:
                     _ = x.fetch(header)
                     curr_total += x.get_reference_length(header)
