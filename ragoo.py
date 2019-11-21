@@ -81,7 +81,7 @@ def write_misasm_broken_ctgs(contigs_file, breaks, out_prefix, in_gff=None, in_g
                 for j in in_gff[i]:
                     out_gff.write(str(j) + '\n')
 
-    x = pysam.FastaFile(os.path.join("..", "..", contigs_file))
+    x = pysam.FastaFile(os.path.relpath(contigs_file))
     with open(out_prefix + ".misasm.break.fa", 'w') as outfile:
         for header in x.references:
             seq = x.fetch(header)
@@ -103,9 +103,10 @@ def align_misasm_broken(out_prefix):
     os.chdir('ctg_alignments')
 
     ctgs_file = out_prefix + ".misasm.break.fa"
-    cmd = '{} -k19 -w19 -t{} ../../{}  {} ' \
-          '> contigs_brk_against_ref.paf 2> contigs_brk_against_ref.paf.log'.format(minimap_path, t, reference_file,
-                                                                            ctgs_file)
+    cmd = '{} -k19 -w19 -t{} {}  {} ' \
+          '> contigs_brk_against_ref.paf 2> contigs_brk_against_ref.paf.log'.format(minimap_path, t,
+                                                                                    os.path.relpath(reference_file),
+                                                                                    os.path.relpath(ctgs_file))
     if not os.path.isfile('contigs_brk_against_ref.paf'):
         run(cmd)
     os.chdir(current_path)
@@ -435,13 +436,17 @@ def align_breaks(break_type, m_path, in_reference_file, in_contigs_file, in_num_
     current_path = os.getcwd()
     os.chdir('chimera_break')
     if break_type == 'inter':
-        cmd = '{} -k19 -w19 -t{} ../../{} {} ' \
-          '> inter_contigs_against_ref.paf 2> inter_contigs_against_ref.paf.log'.format(m_path, in_num_threads, in_reference_file, in_contigs_file)
+        cmd = '{} -k19 -w19 -t{} {} {} ' \
+          '> inter_contigs_against_ref.paf 2> inter_contigs_against_ref.paf.log'.format(m_path, in_num_threads,
+                                                                                        os.path.relpath(in_reference_file),
+                                                                                        in_contigs_file)
         if not os.path.isfile('inter_contigs_against_ref.paf'):
             run(cmd)
     else:
-        cmd = '{} -k19 -w19 -t{} ../../{} {} ' \
-              '> intra_contigs_against_ref.paf 2> intra_contigs_against_ref.paf.log'.format(m_path, in_num_threads, in_reference_file, in_contigs_file)
+        cmd = '{} -k19 -w19 -t{} {} {} ' \
+              '> intra_contigs_against_ref.paf 2> intra_contigs_against_ref.paf.log'.format(m_path, in_num_threads,
+                                                                                            os.path.relpath(in_reference_file),
+                                                                                            in_contigs_file)
         if not os.path.isfile('intra_contigs_against_ref.paf'):
             run(cmd)
 
@@ -453,11 +458,14 @@ def align_pms(m_path, num_threads, in_reference_file, args):
     output_path = os.path.join(current_path, 'pm_alignments')
     if not os.path.exists(output_path):
         os.makedirs(output_path)
+    assert os.path.exists("ragoo.fasta")
+    query = os.path.abspath("ragoo.fasta")
     os.chdir('pm_alignments')
 
-    cmd = '{} -ax asm5 --cs -t{} -I {}  ../../{} {} ' \
+    cmd = '{} -ax asm5 --cs -t{} -I {}  {} {} ' \
           '> pm_against_ref.sam 2> pm_contigs_against_ref.sam.log'.format(m_path, num_threads, args.I,
-                                                                                        in_reference_file, '../ragoo.fasta')
+                                                                          os.path.relpath(in_reference_file),
+                                                                          os.path.relpath(query))
     if not os.path.isfile('pm_against_ref.sam'):
         run(cmd)
 
@@ -499,7 +507,7 @@ def get_SVs(sv_min, sv_max, in_ref_file):
         f.write(b2)
 
     # Filter out SVs caused by gaps
-    cmd_5 = 'filter_gap_SVs.py ../../%s' %(in_ref_file)
+    cmd_5 = 'filter_gap_SVs.py {}'.format(os.path.relpath(in_ref_file))
     run(cmd_5)
 
     os.chdir(current_path)
@@ -513,11 +521,15 @@ def align_reads(m_path, num_threads, in_ctg_file, reads, tech='ont'):
     os.chdir('ctg_alignments')
 
     if tech == 'sr':
-        cmd = '{} -x sr -t{} ../../{} ../../{} ' \
-              '> reads_against_ctg.paf 2> reads_against_ctg.paf.log'.format(m_path, num_threads, in_ctg_file, reads)
+        cmd = '{} -x sr -t{} {} {} ' \
+              '> reads_against_ctg.paf 2> reads_against_ctg.paf.log'.format(m_path, num_threads,
+                                                                            os.path.relpath(in_ctg_file),
+                                                                            os.path.relpath(reads))
     elif tech == 'corr':
-        cmd = '{} -x asm10 -t{} ../../{} ../../{} ' \
-              '> reads_against_ctg.paf 2> reads_against_ctg.paf.log'.format(m_path, num_threads, in_ctg_file, reads)
+        cmd = '{} -x asm10 -t{} {} {} ' \
+              '> reads_against_ctg.paf 2> reads_against_ctg.paf.log'.format(m_path, num_threads,
+                                                                            os.path.relpath(in_ctg_file),
+                                                                            os.path.relpath(reads))
     else:
         raise ValueError("Only 'sr' or 'corr' are accepted for read type.")
 
@@ -561,11 +573,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
     contigs_file = os.path.abspath(args.contigs)
     reference_file = os.path.abspath(args.reference)
-    #output_path = args.o
     exclude_file = args.e
     minimap_path = args.m
     break_chimeras = args.b
-    gff_file = args.gff
+    gff_file = os.path.abspath(args.gff)
     min_break_pct = args.p
     min_len = args.l
     min_range = args.r
@@ -577,8 +588,8 @@ if __name__ == "__main__":
     a = args.a
     f = args.f
     group_score_thresh = args.i
-    skip_file = args.j
-    corr_reads = args.R
+    skip_file = os.path.abspath(args.j)
+    corr_reads = os.path.abspath(args.R)
     corr_reads_tech = args.T
     make_chr0 = not args.C
 
@@ -603,9 +614,11 @@ if __name__ == "__main__":
     os.chdir(output_path)
 
     # Run minimap2
-    cmd = '{} -k19 -I {} {} -w19 -t{} ../{} ../{} ' \
+    cmd = '{} -k19 -I {} {} -w19 -t{} {} {} ' \
           '> contigs_against_ref.paf 2> contigs_against_ref.paf.log'.format(minimap_path, args.I, args.mini_extra,
-                                                                            t, reference_file, contigs_file)
+                                                                            t,
+                                                                            os.path.relpath(reference_file),
+                                                                            os.path.relpath(contigs_file))
 
     if not os.path.isfile('contigs_against_ref.paf'):
         run(cmd)
@@ -620,7 +633,7 @@ if __name__ == "__main__":
         if gff_file:
             log('Getting gff features')
             features = defaultdict(list)
-            z = GFFReader(os.path.join('..', gff_file))
+            z = GFFReader(os.path.relpath(gff_file))
             for i in z.parse_gff():
                 features[i.seqname].append(i)
 
@@ -633,7 +646,7 @@ if __name__ == "__main__":
             alns = clean_alignments(alns, l=10000, in_exclude_file=exclude_file, uniq_anchor_filter=True)
             # Process contigs
             log('Getting contigs')
-            contigs_dict = pysam.FastaFile(os.path.join('..', contigs_file))
+            contigs_dict = pysam.FastaFile(os.path.relpath(contigs_file))
 
             log('Finding interchromosomally chimeric contigs')
             all_chimeras = dict()
