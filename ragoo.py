@@ -547,10 +547,10 @@ if __name__ == "__main__":
     parser.add_argument("reference", metavar="<reference.fasta>", type=str, help="reference fasta file (gzipped allowed)")
     parser.add_argument("-o", metavar="PATH", type=str, default="ragoo_output", help="output directory name", dest="out")
     parser.add_argument("-e", metavar="<exclude.txt>", type=str, default="", help="single column text file of reference headers to ignore")
-    parser.add_argument("-gff", metavar="<annotations.gff>", type=str, default='', help="lift-over gff features to chimera-broken contigs")
+    parser.add_argument("-gff", metavar="<annotations.gff>", type=str, default=None, help="lift-over gff features to chimera-broken contigs")
     parser.add_argument("-m", metavar="PATH", type=str, default="minimap2", help='path to minimap2 executable')
     parser.add_argument("-b", action='store_true', default=False, help="Break chimeric contigs")
-    parser.add_argument("-R", metavar="<reads.fasta>", type=str, default="", help="Turns on misassembly correction. Align provided reads to the contigs to aid misassembly correction. fastq or fasta allowed. Gzipped files allowed. Turns off '-b'.")
+    parser.add_argument("-R", metavar="<reads.fasta>", type=str, default=None, help="Turns on misassembly correction. Align provided reads to the contigs to aid misassembly correction. fastq or fasta allowed. Gzipped files allowed. Turns off '-b'.")
     parser.add_argument("-T", metavar="sr", type=str, default="", help="Type of reads provided by '-R'. 'sr' and 'corr' accepted for short reads and error corrected long reads respectively.")
     parser.add_argument("-I", type=str, metavar="index_split", default="4G", help="Minimap2: split index for every ~NUM input bases [4G]")
     parser.add_argument("--mini-extra", type=str, help="Extra flags to pass-through to MiniMap2.")
@@ -577,7 +577,10 @@ if __name__ == "__main__":
     exclude_file = args.e
     minimap_path = args.m
     break_chimeras = args.b
-    gff_file = os.path.abspath(args.gff)
+    if args.gff is not None:
+        gff_file = os.path.abspath(args.gff)
+    else:
+        gff_file = None
     min_break_pct = args.p
     min_len = args.l
     min_range = args.r
@@ -590,11 +593,14 @@ if __name__ == "__main__":
     f = args.f
     group_score_thresh = args.i
     skip_file = args.j
-    corr_reads = args.R
+    if args.R is not None:
+        corr_reads = os.path.abspath(args.R)
+    else:
+        corr_reads = None
     corr_reads_tech = args.T
     make_chr0 = not args.C
 
-    if corr_reads:
+    if corr_reads is not None:
         log("Misassembly correction has been turned on. This automatically inactivates chimeric contig correction.")
         break_chimeras = False
 
@@ -602,7 +608,6 @@ if __name__ == "__main__":
     if corr_reads and not corr_reads_tech:
         raise ValueError("'-T' must be provided when using -R.")
 
-    corr_reads = os.path.abspath(corr_reads)
     skip_ctg = []
     if skip_file:
         skip_file = os.path.abspath(skip_file)
