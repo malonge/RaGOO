@@ -122,20 +122,20 @@ def write_contig_clusters(unique_dict, thresh, skip_list):
         os.makedirs(output_path)
 
     os.chdir('groupings')
-    for i in all_chroms:
-        open(i + '_contigs.txt', 'w').close()
+
+    from collections import defaultdict
+    chrom_to_unique = defaultdict(list)
 
     for i in unique_dict.keys():
         this_chr = unique_dict[i].ref_chrom
         this_confidence = unique_dict[i].confidence
-        if this_confidence > thresh:
-            if not i in skip_list:
-                file_name = str(this_chr) + '_contigs.txt'
-                with open(file_name, 'a') as f:
-                    f.write(i + '\t' + str(this_confidence) + '\n')
+        if this_confidence > thresh and not (i in skip_list):
+            chrom_to_unique[this_chr].append((i, this_confidence))
 
-    with open("done.txt", "w"):
-        pass
+    for chrom in all_chroms:
+        with open(chrom + '_contigs.txt', 'wt') as out_file:
+            for i, this_confidence in chrom_to_unique[chrom]:
+                print(i, this_confidence, sep="\t")
 
     os.chdir(current_path)
 
@@ -295,7 +295,7 @@ def order_orient_contigs(in_unique_contigs, in_alns):
             # There is a scope issue here. Pass this (longest_contigs) to the method explicitly.
             ref_pos.append((longest_contigs[contigs_list[i]].ref_start, longest_contigs[contigs_list[i]].ref_end, i))
 
-        final_order = odict((contigs_list[i[2]], (i[0]. i[1])) for i in sorted(ref_pos))
+        final_order = odict((contigs_list[i[2]], (i[0], i[1])) for i in sorted(ref_pos))
 
         # Get ordering confidence
         # To do this, get the max and min alignments to this reference chromosome
