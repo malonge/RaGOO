@@ -15,6 +15,7 @@ from ragoo_utilities.break_chimera import get_ref_parts, cluster_contig_alns, av
 import os
 import argparse
 import re
+from collections import OrderedDict as odict
 
 
 def update_misasm_features(features, breaks, contig, ctg_len):
@@ -294,16 +295,18 @@ def order_orient_contigs(in_unique_contigs, in_alns):
             # There is a scope issue here. Pass this (longest_contigs) to the method explicitly.
             ref_pos.append((longest_contigs[contigs_list[i]].ref_start, longest_contigs[contigs_list[i]].ref_end, i))
 
-        final_order = [contigs_list[i[2]] for i in sorted(ref_pos)]
+        final_order = odict((contigs_list[i[2]], (i[0]. i[1])) for i in sorted(ref_pos))
 
         # Get ordering confidence
         # To do this, get the max and min alignments to this reference chromosome
         # Then within that region, what percent of bp are covered
 
         with open(os.path.join('orderings',  this_chrom + '_orderings.txt'), 'w') as out_file:
-            for i in final_order:
+            for i, pos in final_order.items():
                 # Also have a scope issue here.
-                out_file.write(i + '\t' + final_orientations[i] + '\t' + str(location_confidence[i]) + '\t' + str(orientation_confidence[i]) + '\n')
+                # i is the scaffold
+                print(i, final_orientations[i], location_confidence[i], orientation_confidence[i],
+                      pos[0], pos[1], sep="\t", file=out_file)
 
     with open(os.path.join('orderings', "done.txt"), 'w') as out_file:
         pass
