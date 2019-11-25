@@ -135,7 +135,7 @@ def write_contig_clusters(unique_dict, thresh, skip_list):
     for chrom in all_chroms:
         with open(chrom + '_contigs.txt', 'wt') as out_file:
             for i, this_confidence in chrom_to_unique[chrom]:
-                print(i, this_confidence, sep="\t")
+                print(i, this_confidence, sep="\t", file=out_file)
 
     os.chdir(current_path)
 
