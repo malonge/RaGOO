@@ -305,7 +305,7 @@ def order_orient_contigs(in_unique_contigs, in_alns):
                 # Also have a scope issue here.
                 out_file.write(i + '\t' + final_orientations[i] + '\t' + str(location_confidence[i]) + '\t' + str(orientation_confidence[i]) + '\n')
 
-    with open(os.path.join('orderings', "done.txt")) as out_file:
+    with open(os.path.join('orderings', "done.txt"), 'w') as out_file:
         pass
 
 
