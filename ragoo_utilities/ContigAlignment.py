@@ -278,7 +278,6 @@ class ContigAlignment:
         return all_candidates
 
 
-
 class UniqueContigAlignment:
     """
     A class representing the reference chromosome to which a particular contig will be assigned to.
@@ -286,7 +285,7 @@ class UniqueContigAlignment:
     reference chromosome to an input contig.
     """
 
-    def __init__(self, in_contig_aln):
+    def __init__(self, in_contig_aln, use_quality=False):
         if not isinstance(in_contig_aln, ContigAlignment):
             message = 'Can only make a unique alignment from a ContigAlignment object. Got type %s instead.' % str(type(in_contig_aln))
             raise ValueError(message)
@@ -296,6 +295,7 @@ class UniqueContigAlignment:
         # Find the chromosome which was covered the most in these alignments.
         self.ref_chrom = None
         self.confidence = 0.0
+        self._use_quality = use_quality
         self._get_best_ref_cov(in_contig_aln)
 
     def __str__(self):
@@ -316,9 +316,14 @@ class UniqueContigAlignment:
 
         # Get all the ranges in reference to all chromosomes
         all_intervals = defaultdict(list)
+        best_chrom, best_quality = None, -1
         for i in range(len(alns.ref_headers)):
             this_range = (alns.ref_starts[i], alns.ref_ends[i])
             this_chrom = alns.ref_headers[i]
+            this_quality = alns.mapqs[i]
+            if best_quality < this_quality:
+                best_chrom = this_chrom
+                best_quality = this_quality
             all_intervals[this_chrom].append(this_range)
 
         # For each chromosome, sort the range and get the union interval length.
@@ -334,12 +339,15 @@ class UniqueContigAlignment:
         assert ranges
 
         # I convert to a list and sort the ranges.items() in order to have ties broken in a deterministic way.
-        max_chrom = max(sorted(list(ranges.items())), key=operator.itemgetter(1))[0]
-        self.ref_chrom = max_chrom
+        if self._use_quality is False:
+            max_chrom = max(sorted(list(ranges.items())), key=operator.itemgetter(1))[0]
+            self.ref_chrom = max_chrom
+        else:
+            self.ref_chrom = best_chrom
 
         # Now get the confidence of this chromosome assignment
         # Equal to the max range over all ranges
-        self.confidence = ranges[max_chrom]/sum(ranges.values())
+        self.confidence = ranges[self.ref_chrom]/sum(ranges.values())
         assert self.confidence >= 0
         assert self.confidence <= 1
 
@@ -352,7 +360,8 @@ class LongestContigAlignment:
     2. Find longest alignment remaining.
     """
 
-    def __init__(self, in_contig_aln):
+    def __init__(self, in_contig_aln, use_quality=False):
+        self._use_quality = use_quality
         self.best_index = self._get_best_index(in_contig_aln)
         self.contig = in_contig_aln.contig
         self.ref_start = in_contig_aln.ref_starts[self.best_index]
@@ -362,10 +371,19 @@ class LongestContigAlignment:
         self.interval = (self.ref_start, self.ref_end)
 
     def _get_best_index(self, aln):
-        max_index = -1
-        max_len = -1
-        for i in range(len(aln.aln_lens)):
-            if aln.aln_lens[i] > max_len:
-                max_len = aln.aln_lens[i]
-                max_index = i
+        if self._use_quality is False:
+            max_index = -1
+            max_len = -1
+            for i in range(len(aln.aln_lens)):
+                if aln.aln_lens[i] > max_len:
+                    max_len = aln.aln_lens[i]
+                    max_index = i
+        else:
+            max_index = -1
+            maxq = -1
+            for i in range(len(aln.mapqs)):
+                if aln.mapqs[i] > maxq:
+                    maxq = aln.mapqs[i]
+                    max_index = i
+
         return max_index
