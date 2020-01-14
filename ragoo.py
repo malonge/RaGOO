@@ -220,7 +220,7 @@ def get_location_confidence(in_ctg_alns):
     return ovlp_range / (max_pos - min_pos)
 
 
-def order_orient_contigs(in_unique_contigs, in_alns):
+def order_orient_contigs(in_unique_contigs, in_alns, keep_orderings=False):
     current_path = os.getcwd()
     output_path = current_path + '/orderings'
     if not os.path.exists(output_path):
@@ -276,7 +276,7 @@ def order_orient_contigs(in_unique_contigs, in_alns):
 
     for this_chrom in all_chroms:
 
-        # Intialize the list of start and end positions w.r.t the query
+        # Initialize the list of start and end positions w.r.t the query
         ref_pos = []
 
         groupings_file = 'groupings/' + this_chrom + '_contigs.txt'
@@ -288,14 +288,11 @@ def order_orient_contigs(in_unique_contigs, in_alns):
 
         final_order = [contigs_list[i[2]] for i in sorted(ref_pos)]
 
-        # Get ordering confidence
-        # To do this, get the max and min alignments to this reference chromosome
-        # Then within that region, what percent of bp are covered
-
-        with open('orderings/' + this_chrom + '_orderings.txt', 'w') as out_file:
-            for i in final_order:
-                # Also have a scope issue here.
-                out_file.write(i + '\t' + final_orientations[i] + '\t' + str(location_confidence[i]) + '\t' + str(orientation_confidence[i]) + '\n')
+        if not os.path.isfile('orderings/' + this_chrom + '_orderings.txt') or keep_orderings is False:
+            with open('orderings/' + this_chrom + '_orderings.txt', 'w') as out_file:
+                for i in final_order:
+                    # Also have a scope issue here.
+                    out_file.write(i + '\t' + final_orientations[i] + '\t' + str(location_confidence[i]) + '\t' + str(orientation_confidence[i]) + '\n')
 
 
 def get_orderings(in_orderings_file):
@@ -557,7 +554,7 @@ if __name__ == "__main__":
     corr_reads = args.R
     corr_reads_tech = args.T
     make_chr0 = not args.C
-    keep_orderings = args.O
+    keep_orderings_files = args.O
 
     if corr_reads:
         log("Misassembly correction has been turned on. This automatically inactivates chimeric contig correction.")
@@ -746,7 +743,7 @@ if __name__ == "__main__":
     write_contig_clusters(all_unique_contigs, group_score_thresh, skip_ctg)
 
     log('Ordering and orienting contigs')
-    order_orient_contigs(all_unique_contigs, alns)
+    order_orient_contigs(all_unique_contigs, alns, keep_orderings=keep_orderings_files)
 
     log('Creating pseudomolecules')
     create_pseudomolecules(contigs_file, all_unique_contigs, g, make_chr0)
