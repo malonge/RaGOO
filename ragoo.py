@@ -531,6 +531,7 @@ if __name__ == "__main__":
     parser.add_argument("-i", metavar="0.2", type=float, default=0.2, help="Minimum grouping confidence score needed to be localized.")
     parser.add_argument("-j", metavar="<skip.txt>", type=str, default="", help="List of contigs to automatically put in chr0.")
     parser.add_argument("-C", action='store_true', default=False, help="Write unplaced contigs individually instead of making a chr0")
+    parser.add_argument("-O", action='store_true', default=False, help="Don't overwrite orderings files if they alraedy exist.")
 
     # Get the command line arguments
     args = parser.parse_args()
@@ -556,6 +557,7 @@ if __name__ == "__main__":
     corr_reads = args.R
     corr_reads_tech = args.T
     make_chr0 = not args.C
+    keep_orderings = args.O
 
     if corr_reads:
         log("Misassembly correction has been turned on. This automatically inactivates chimeric contig correction.")
