@@ -46,10 +46,11 @@ def make_gaps_tree(in_file):
 
 
 def get_query_bed_coords(in_line):
-    L1 = in_line.split(':')
-    header = L1[0]
-    L2 = L1[1].split('-')
-    start, stop = int(L2[0]), int(L2[1])
+    c_loc = [m.start() for m in re.finditer(':', in_line)]
+    c1, c2 = c_loc[-1], c_loc[-2]
+    header = in_line[:c2]
+    L1 = in_line[c2+1:c1].split('-')
+    start, stop = int(L1[0]), int(L1[1])
     return header, start, stop
 
 
