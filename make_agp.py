@@ -42,48 +42,49 @@ if __name__ == "__main__":
     sys.stdout.write("## AGP-version 2.0\n")
     sys.stdout.write("## AGP constructed by RaGOO\n")
     for chrom in orderings:
-        for ctg, strand in orderings[chrom]:
-            start = current_pos
-            end = current_pos + ctg_lens[ctg] - 1
-            line_buff = list()
+        if orderings[chrom]:
+            for ctg, strand in orderings[chrom]:
+                start = current_pos
+                end = current_pos + ctg_lens[ctg] - 1
+                line_buff = list()
 
-            # Write the line for the contig
-            line_buff.append(chrom)
-            line_buff.append(str(start))
-            line_buff.append(str(end))
-            line_buff.append(str(idx))
-            line_buff.append("W")
-            line_buff.append(ctg)
-            line_buff.append("1")
-            line_buff.append(str(end - start + 1))
-            line_buff.append(strand)
-            out_buff.append("\t".join(line_buff))
+                # Write the line for the contig
+                line_buff.append(chrom)
+                line_buff.append(str(start))
+                line_buff.append(str(end))
+                line_buff.append(str(idx))
+                line_buff.append("W")
+                line_buff.append(ctg)
+                line_buff.append("1")
+                line_buff.append(str(end - start + 1))
+                line_buff.append(strand)
+                out_buff.append("\t".join(line_buff))
 
-            # Write the line for the gap
-            idx += 1
-            current_pos += ctg_lens[ctg]
-            start = current_pos
-            end = current_pos + gap_len - 1
-            line_buff = list()
+                # Write the line for the gap
+                idx += 1
+                current_pos += ctg_lens[ctg]
+                start = current_pos
+                end = current_pos + gap_len - 1
+                line_buff = list()
 
-            line_buff.append(chrom)
-            line_buff.append(str(start))
-            line_buff.append(str(end))
-            line_buff.append(str(idx))
-            line_buff.append("N")
-            line_buff.append(str(gap_len))
-            line_buff.append("scaffold")
-            line_buff.append("yes")
-            line_buff.append("align_genus")
-            out_buff.append("\t".join(line_buff))
+                line_buff.append(chrom)
+                line_buff.append(str(start))
+                line_buff.append(str(end))
+                line_buff.append(str(idx))
+                line_buff.append("N")
+                line_buff.append(str(gap_len))
+                line_buff.append("scaffold")
+                line_buff.append("yes")
+                line_buff.append("align_genus")
+                out_buff.append("\t".join(line_buff))
 
-            idx += 1
-            current_pos += gap_len
+                idx += 1
+                current_pos += gap_len
 
-        # Pop the last gap since we don't end with padding
-        out_buff.pop()
-        idx =1
-        chrom_idx += 1
-        current_pos = 1
+            # Pop the last gap since we don't end with padding
+            out_buff.pop()
+            idx =1
+            chrom_idx += 1
+            current_pos = 1
 
     sys.stdout.write("\n".join(out_buff) + "\n")
