@@ -7,7 +7,7 @@
 
 ## Announcements
 
-The new and improved RagTag, RaGOO's successor, is now available [here](https://github.com/malonge/RagTag)! Please transition your work here, if possible, as RaGOO will eventually no longer be supported.
+RagTag, RaGOO's successor, is now available [here](https://github.com/malonge/RagTag)! Please transition your work here, if possible, as RaGOO will eventually no longer be supported.
 
 ## Description
 
