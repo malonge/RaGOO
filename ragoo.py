@@ -549,8 +549,8 @@ if __name__ == "__main__":
     t = args.t
     g = args.g
     call_svs = args.s
-    a = args.a
-    f = args.f
+    min_assemblytics = args.a
+    max_assemblytics = args.f
     group_score_thresh = args.i
     skip_file = args.j
     corr_reads = args.R
@@ -754,6 +754,6 @@ if __name__ == "__main__":
         align_pms(minimap_path, t, reference_file)
 
         log('Getting structural variants')
-        get_SVs(a, f, reference_file)
+        get_SVs(min_assemblytics, max_assemblytics, reference_file)
 
     log('goodbye')
